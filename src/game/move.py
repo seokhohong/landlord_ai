@@ -1,12 +1,16 @@
 from collections import Counter
 from enum import Enum, auto
 
-from src.game.deck import Card
+from src.game.card import Card
 
 
 class BetMove:
-    def __init__(self, amount):
+    def __init__(self, amount: int):
+        assert type(amount) == int
         self.amount = amount
+
+    def get_amount(self):
+        return self.amount
 
 class KittyReveal:
     def __init__(self, cards):
@@ -107,6 +111,9 @@ class SpecificMove:
         if other is None:
             return True
         return self.ranked_move_type.beats(other.ranked_move_type)
+
+    def is_bomb(self):
+        return self.ranked_move_type == MoveType.BOMB
 
     def __str__(self):
         return str(self.ranked_move_type) + '(' + str(self.cards) + ')'

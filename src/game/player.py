@@ -1,10 +1,13 @@
 from enum import Enum, IntEnum
-from src.game.deck import CardSet, Card
+from src.game.deck import CardSet
+from src.game.card import Card
 from collections import Counter
 import random
 import numpy as np
 import keras
 from keras.layers import *
+from keras.losses import mean_squared_error
+from copy import copy
 
 from src.game.move import KittyReveal, SpecificMove, BetMove
 
@@ -22,6 +25,9 @@ class TurnPosition(IntEnum):
         if self == TurnPosition.THIRD:
             return TurnPosition.FIRST
 
+    def previous(self):
+        return self.next().next()
+
     def __repr__(self):
         return self.__str__()
 
@@ -33,7 +39,7 @@ class Player:
         self.name = name
 
     # returns None for pass
-    def make_bet(self, game):
+    def make_bet(self, game, player: TurnPosition):
         return None
 
     # returns None for pass, otherwise returns a SpecificMove
@@ -49,12 +55,19 @@ class LearningPlayer_v1(Player):
     # 1: separate boolean for vault reveal
     TIMESTEP_FEATURES = len(Card) + 6
 
-    def __init__(self, name, net_files):
+    def __init__(self, name, epsilon=0.1, net_files=None):
         super().__init__(name)
         if net_files is None:
             self.create_nnet()
         else:
             self.load_nnets(net_files)
+
+        self.epsilon = 0.1
+        self.feature_index = self.make_feature_index()
+
+        # elements for record
+        self.record_state = []
+        self.record_future_q = []
 
     def load_nnets(self, net_files):
         self.history_nnet = keras.models.load_model(net_files[0])
@@ -67,64 +80,153 @@ class LearningPlayer_v1(Player):
         inp = Input((LearningPlayer_v1.TIMESTEPS, LearningPlayer_v1.TIMESTEP_FEATURES))
         gru = GRU(64)(inp)
         self.history_net = keras.models.Model(inputs=[inp], outputs=gru)
-        self.history_net.compile(loss='mean_square_error', optimizer='adam', metrics=['mean_squared_error'])
+        self.history_net.compile(loss=mean_squared_error, optimizer='adam', metrics=['mean_squared_error'])
 
-        history_inp = Input((GRU_DIM))
-        play_inp = Input((LearningPlayer_v1.TIMESTEP_FEATURES))
-        dense_1 = Dense(32, activation='relu')(Concatenate([history_inp, play_inp]))
+        history_inp = Input((GRU_DIM, ))
+        play_inp = Input((LearningPlayer_v1.TIMESTEP_FEATURES, ))
+        dense_1 = Dense(32, activation='relu')(Concatenate()([history_inp, play_inp]))
         dense_2 = Dense(1, activation='sigmoid')(dense_1)
-        self.eval_net = keras.models.Model(inputs=[history_inp, play_inp], outputs=[dense_2])
-        self.eval_net.compile(loss='mean_square_error', optimizer='adam', metrics = ['mean_squared_error'])
+        self.position_net = keras.models.Model(inputs=[history_inp, play_inp], outputs=[dense_2])
+        self.position_net.compile(loss=mean_squared_error, optimizer='adam', metrics = ['mean_squared_error'])
 
-    @classmethod
-    def feature_index(cls, i):
+    def make_feature_index(self):
         'maps card to feature index'
-        if cls.feature_mapping is None:
-            feature_list = [[card.get_name() for card in Card]]
-            feature_list.extend(['I_AM_LANDLORD',
-                                 'I_AM_BEFORE_LANDLORD',
-                                 'I_AM_AFTER_LANDLORD',
-                                 'POINTS_BET',
-                                 'IS_PASS',
-                                'REVEALING_KITTY'])
+        feature_list = [card.get_name() for card in Card]
+        feature_list.extend(['I_AM_LANDLORD',
+                             'I_AM_BEFORE_LANDLORD',
+                             'I_AM_AFTER_LANDLORD',
+                             'POINTS_BET',
+                             'IS_PASS',
+                            'REVEALING_KITTY'])
 
-            cls.feature_mapping = dict([(i, value) for value, i in enumerate(feature_list)])
+        return dict([(i, value) for value, i in enumerate(feature_list)])
 
-        return cls.feature_mapping[i]
+    def get_feature_index(self, i):
+        return self.feature_index[i]
 
     def derive_features(self, game):
-        feature_matrix = np.zeros((LearningPlayer_v1.TIMESTEPS, LearningPlayer_v1.TIMESTEP_FEATURES))
-        for i, move in enumerate(game.get_game_logs()):
-            other_features = {}
-            player_position, step = move
-            if type(step) == BetMove:
-                other_features = {
-                    'IS_PASS': 1
-                }
-            if step is None:
-                other_features = {
-                    'IS_PASS': 1
-                }
-            if type(step) == KittyReveal:
-                for card, count in step.cards.items():
-                    feature_matrix[i, LearningPlayer_v1.feature_index(card)] = count
+        fluff_volume = LearningPlayer_v1.TIMESTEPS - len(game.get_game_logs())
 
+        assert fluff_volume >= 0
+        fluff_stack = np.zeros((fluff_volume, LearningPlayer_v1.TIMESTEP_FEATURES))
 
-            if type(step) == SpecificMove:
-                for card, count in step.cards.items():
-                    feature_matrix[i, LearningPlayer_v1.feature_index(card)] = count
-                other_features = {
-                    'I_AM_LANDLORD': 1 if game.current_player_is_landlord() else 0,
-                    'I_AM_BEFORE_LANDLORD': 1 if game.get_current_position().before() == game.get_landlord_position() else 0,
-                    'I_AM_AFTER_LANDLORD': 1 if game.get_current_position().before() == game.get_landlord_position() else 0,
-                }
-            for feature, value in other_features.items():
-                feature_matrix[i, LearningPlayer_v1.feature_index(feature)] = value
+        if len(game.get_game_logs()) == 0:
+            return fluff_stack
+
+        move_stack = np.vstack([self.compute_move_vector(game, move) for move in game.get_game_logs()])
+
+        return np.vstack([move_stack, fluff_stack])
+
+    def compute_move_vector(self, game, move):
+        move_vector = np.zeros(LearningPlayer_v1.TIMESTEP_FEATURES)
+        other_features = {}
+        player_position, step = move
+        if type(step) == BetMove:
+            other_features = {
+                'POINTS_BET': step.get_amount()
+            }
+        if step is None:
+            other_features = {
+                'IS_PASS': 1
+            }
+            if game.is_betting_complete():
+                other_features['I_AM_LANDLORD'] = 1 if game.current_player_is_landlord() else 0
+                other_features[
+                    'I_AM_BEFORE_LANDLORD'] = 1 if game.get_current_position().next() == game.get_landlord_position() else 0
+                other_features[
+                    'I_AM_AFTER_LANDLORD'] = 1 if game.get_current_position().previous() == game.get_landlord_position() else 0
+
+        if type(step) == KittyReveal:
+            for card in step.cards:
+                move_vector[self.get_feature_index(card.name)] += 1
+            other_features = {
+                'REVEALING_KITTY': 1
+            }
+
+        if type(step) == SpecificMove:
+            for card, count in step.cards.items():
+                move_vector[self.get_feature_index(card.name)] = count
+            # print(1 if game.current_player_is_landlord() else 0)
+            # print(1 if game.get_current_position().next() == game.get_landlord_position() else 0)
+            # print(1 if game.get_current_position().previous() == game.get_landlord_position() else 0)
+            other_features = {
+                'I_AM_LANDLORD': 1 if game.current_player_is_landlord() else 0,
+                'I_AM_BEFORE_LANDLORD': 1 if game.get_current_position().next() == game.get_landlord_position() else 0,
+                'I_AM_AFTER_LANDLORD': 1 if game.get_current_position().previous() == game.get_landlord_position() else 0,
+            }
+        for feature, value in other_features.items():
+            move_vector[self.get_feature_index(feature)] = value
+
+        return move_vector
+
+    # hard_clamp means we only consider win states to have value (useful when the network is not initialized)
+    def compute_state_value(self, game, has_won, hard_clamp=False):
+        if has_won:
+            return 1
+        if hard_clamp:
+            return 0
+        return self.history_nnet.predict(self.derive_features(game))
+
+    def get_history_vector(self, features):
+        return self.history_net.predict(np.array([features]))[0]
+
+    def decide_best_move(self, game, player: TurnPosition, history_matrix=None):
+        assert len(game.get_hand(player)) > 0
+        legal_moves = game.get_legal_moves(player)
+
+        # allows us to skip computation
+        if history_matrix is None:
+            history_matrix = self.derive_features(game)
+
+        # all the moves we make from here will not affect the history, so assess it and copy
+        history_vector = self.get_history_vector(history_matrix)
+        history_matrix = np.tile(history_vector, (len(legal_moves), 1))
+
+        # create features for each of the possible moves from this position
+        move_options_matrix = np.vstack([self.compute_move_vector(game, (game.get_current_position(), move)) for move in legal_moves])
+
+        predictions = self.position_net.predict([history_matrix, move_options_matrix])[0]
+
+        best_move_index = np.argmax(predictions)
+        best_move = legal_moves[best_move_index]
+        best_move_q = predictions[best_move_index]
+
+        return best_move, best_move_q
+
+    def make_bet(self, game, player: TurnPosition):
+        return self.make_move(game, player)
+
+    def make_move(self, game, player: TurnPosition):
+        history_matrix = self.derive_features(game)
+        best_move, _ = self.decide_best_move(game, player, history_matrix)
+
+        copy_game = copy(game)
+        copy_game.play_move(best_move)
+        if copy_game.is_round_over():
+            future_reward = copy_game.get_r_from_perspective(player)
+        else:
+            best_next_move, best_next_move_q = self.decide_best_move(copy_game, player.next())
+            copy_game.play_move(best_next_move)
+            if copy_game.is_round_over():
+                future_reward = copy_game.get_r_from_perspective(player.next())
+            else:
+                future_reward = best_next_move_q + copy_game.get_r_from_perspective(player.next())
+
+        if future_reward < 0.01:
+            print('why')
+        self.record_move(history_matrix, future_reward)
+
+        return best_move
+
+    def record_move(self, history_matrix, best_move_score):
+        self.record_state.append(history_matrix)
+        self.record_future_q.append(best_move_score)
+
 
 class RandomPlayer(Player):
-    def make_bet(self, game):
+    def make_bet(self, game, player: TurnPosition):
         if game.get_bet_amount() < game.MAX_BET:
-            return game.get_bet_amount() + 1
+            return BetMove(game.get_bet_amount() + 1)
         return None
 
     def make_move(self, game, player: TurnPosition):
@@ -141,5 +243,5 @@ class RandomPlayer(Player):
         return random.choice(legal_moves)
 
 class NoBetPlayer(Player):
-    def make_bet(self, game):
+    def make_bet(self, game, player: TurnPosition):
         return None

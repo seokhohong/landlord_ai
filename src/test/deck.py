@@ -1,6 +1,7 @@
 import unittest
 
-from src.game.deck import Card, CardSet
+from src.game.deck import CardSet
+from src.game.card import Card
 from src.game.move import RankedMoveType, MoveType
 from collections import Counter
 
