@@ -69,6 +69,10 @@ class LearningPlayer_v1(Player):
         self.record_state = []
         self.record_future_q = []
 
+    def reset_records(self):
+        self.record_state = []
+        self.record_future_q = []
+
     def load_nnets(self, net_files):
         self.history_nnet = keras.models.load_model(net_files[0])
         self.position_nnet = keras.models.load_model(net_files[1])
@@ -185,7 +189,7 @@ class LearningPlayer_v1(Player):
         # create features for each of the possible moves from this position
         move_options_matrix = np.vstack([self.compute_move_vector(game, (game.get_current_position(), move)) for move in legal_moves])
 
-        predictions = self.position_net.predict([history_matrix, move_options_matrix])[0]
+        predictions = self.position_net.predict([history_matrix, move_options_matrix]).reshape(len(legal_moves))
 
         best_move_index = np.argmax(predictions)
         best_move = legal_moves[best_move_index]
@@ -221,6 +225,12 @@ class LearningPlayer_v1(Player):
     def record_move(self, history_matrix, best_move_score):
         self.record_state.append(history_matrix)
         self.record_future_q.append(best_move_score)
+
+    def get_record_states(self):
+        return self.record_state
+
+    def get_future_q(self):
+        return self.record_future_q
 
 
 class RandomPlayer(Player):

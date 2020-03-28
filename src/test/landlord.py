@@ -25,6 +25,11 @@ class TestLandlordMethods(unittest.TestCase):
         self.assertTrue(game.get_hand(TurnPosition.SECOND) == game2.get_hand(TurnPosition.SECOND))
         self.assertTrue(game.get_last_played() == game2.get_last_played())
 
+    def test_many_games(self):
+        for i in range(10):
+            game = LandlordGame(players=[RandomPlayer(name='random')] * 3)
+            game.play_round()
+
     def test_game_copy(self):
         game = LandlordGame(players=[RandomPlayer(name='random')] * 3)
         game2 = copy(game)
@@ -67,9 +72,9 @@ class TestLandlordMethods(unittest.TestCase):
         game = LandlordGame(players=players)
         game.force_current_position(TurnPosition.SECOND)
         game.force_kitty([Card.LITTLE_JOKER, Card.BIG_JOKER, Card.THREE])
-        game.make_bet(BetMove(2))
-        game.make_bet(None)
-        game.make_bet(BetMove(3))
+        game.make_bet_move(BetMove(2))
+        game.make_bet_move(None)
+        game.make_bet_move(BetMove(3))
         game.reveal_kitty()
         hands = {
             TurnPosition.FIRST: [Card.ACE] * 4 + [Card.KING] * 4 + [Card.QUEEN] * 4 + [Card.JACK] * 4 + [Card.THREE],

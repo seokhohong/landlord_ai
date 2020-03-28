@@ -84,7 +84,7 @@ class LandlordGame:
         # limit number of steps to check for draw
         for i in range(6):
             bet = self.get_current_player().make_bet(self, self.get_current_position())
-            self.make_bet(bet)
+            self.make_bet_move(bet)
             if bet is not None and bet.get_amount() == LandlordGame.MAX_BET:
                 self._current_position = self.landlord_position
                 break
@@ -105,7 +105,7 @@ class LandlordGame:
             self.play_move(move)
     '''
 
-    def make_bet(self, bet):
+    def make_bet_move(self, bet):
         if bet is not None and bet.get_amount() > self.bet_amount:
             self.string_logs.append(str(self._current_position) + " bet " + str(bet))
             self.move_logs.append((self._current_position, bet))
@@ -163,7 +163,14 @@ class LandlordGame:
             for i in range(count):
                 hand.remove(card)
 
+    # main play_move, triages depending on move
     def play_move(self, move):
+        if self.is_betting_complete():
+            self.make_card_move(move)
+        else:
+            self.make_bet_move(move)
+
+    def make_card_move(self, move):
         self.move_logs.append((self._current_position, move))
         if move is not None:
             assert (move.beats(self.last_played) or self._current_position == self.control_position)
@@ -252,4 +259,10 @@ class LandlordGame:
 
     def is_round_over(self):
         return self.round_over
+
+    def has_winners(self):
+        return self.winners is not None
+
+    def get_ai(self, pos: TurnPosition):
+        return self.players[pos]
 
