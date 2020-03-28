@@ -3,7 +3,7 @@ import random
 
 import numpy as np
 
-from src.game.landlord import LandlordGame
+from landlord.game.landlord import LandlordGame
 from scipy import sparse
 
 class Simulator:
@@ -13,9 +13,13 @@ class Simulator:
         self.sparse_record_states = []
         self.q = []
 
-    def play_rounds(self):
-        for _ in range(self.rounds):
+    def play_rounds(self, debug=False):
+        for r in range(self.rounds):
+            if debug:
+                print('Playing Round ', r)
             self.play_game()
+        if debug:
+            print('Done Playing')
 
     def play_game(self):
         players = self.pick_players()

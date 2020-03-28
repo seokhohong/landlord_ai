@@ -1,7 +1,7 @@
 from collections import Counter
 from enum import Enum, auto
 
-from src.game.card import Card
+from landlord.game.card import Card
 
 
 class BetMove:

@@ -1,13 +1,13 @@
-from src.game.card import Card
-from src.game.landlord import LandlordGame
-from src.game.move import SpecificMove, RankedMoveType, MoveType, BetMove
-from src.game.player import RandomPlayer, NoBetPlayer, LearningPlayer_v1, TurnPosition
+from landlord.game.card import Card
+from landlord.game.landlord import LandlordGame
+from landlord.game.move import SpecificMove, RankedMoveType, MoveType, BetMove
+from landlord.game.player import RandomPlayer, NoBetPlayer, LearningPlayer_v1, TurnPosition
 from collections import Counter
 import numpy as np
 import unittest
 from copy import copy
 
-from src.sim.simulate import Simulator
+from landlord.sim.simulate import Simulator
 
 
 class TestLandlordMethods(unittest.TestCase):

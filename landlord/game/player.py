@@ -1,6 +1,6 @@
 from enum import Enum, IntEnum
-from src.game.deck import CardSet
-from src.game.card import Card
+from landlord.game.deck import CardSet
+from landlord.game.card import Card
 from collections import Counter
 import random
 import numpy as np
@@ -9,7 +9,7 @@ from keras.layers import *
 from keras.losses import mean_squared_error
 from copy import copy
 
-from src.game.move import KittyReveal, SpecificMove, BetMove
+from landlord.game.move import KittyReveal, SpecificMove, BetMove
 
 
 class TurnPosition(IntEnum):

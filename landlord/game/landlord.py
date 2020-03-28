@@ -2,9 +2,9 @@ import random
 
 import numpy as np
 
-from src.game.player import TurnPosition
-from src.game.deck import LandlordDeck, CardSet
-from src.game.move import SpecificMove, BetMove, KittyReveal
+from landlord.game.player import TurnPosition
+from landlord.game.deck import LandlordDeck, CardSet
+from landlord.game.move import SpecificMove, BetMove, KittyReveal
 from copy import deepcopy, copy
 from collections import Counter
 
