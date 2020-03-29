@@ -1,0 +1,9 @@
+dependencies:
+  - numpy
+  - scipy
+  - keras
+  - tensorflow
+  - pyspark
+  - jupyter
+  - pip:
+    - google.cloud.storage
