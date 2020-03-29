@@ -1,0 +1,1 @@
+/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome "http://pyspark1-m:8124" --proxy-server="socks5://localhost:$PORT" --host-resolver-rules="MAP * 0.0.0.0 , EXCLUDE localhost" --user-data-dir=/tmp/
