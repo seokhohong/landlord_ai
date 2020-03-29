@@ -1,9 +1,9 @@
 import unittest
-
-from landlord.game.deck import CardSet
-from landlord.game.card import Card
-from landlord.game.move import RankedMoveType, MoveType
 from collections import Counter
+
+from landlordai.game.card import Card
+from landlordai.game.deck import CardSet
+from landlordai.game.move import RankedMoveType, MoveType
 
 
 class TestLandlordMethods(unittest.TestCase):

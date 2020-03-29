@@ -1,9 +1,7 @@
 import multiprocessing
-import time
 
-from landlord.game.player import LearningPlayer_v1
-from landlord.sim.simulate import Simulator
-
+from landlordai.game.player import LearningPlayer_v1
+from landlordai.sim.simulate import Simulator
 
 
 def run_simulator(player_pool):

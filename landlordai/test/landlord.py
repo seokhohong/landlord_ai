@@ -1,21 +1,24 @@
-from landlord.game.card import Card
-from landlord.game.landlord import LandlordGame
-from landlord.game.move import SpecificMove, RankedMoveType, MoveType, BetMove
-from landlord.game.player import RandomPlayer, NoBetPlayer, LearningPlayer_v1, TurnPosition
-from collections import Counter
-import numpy as np
 import unittest
+from collections import Counter
 from copy import copy
+
+import numpy as np
+
+from landlordai.game.card import Card
+from landlordai.game.landlord import LandlordGame
+from landlordai.game.move import SpecificMove, RankedMoveType, MoveType, BetMove
+from landlordai.game.player import RandomPlayer, NoBetPlayer, LearningPlayer_v1, TurnPosition
+
 
 class TestLandlordMethods(unittest.TestCase):
     def test_basic_game(self):
         game = LandlordGame(players=[RandomPlayer(name='random')] * 3)
         game.play_round()
-        for player in list(TurnPosition):
-            if player in game.winners:
-                self.assertTrue(game.get_r_from_perspective(player) > 0)
+        for _ in list(TurnPosition):
+            if game.get_landlord_position() in game.winners:
+                self.assertTrue(game.get_r() > 0)
             else:
-                self.assertTrue(game.get_r_from_perspective(player) < 0)
+                self.assertTrue(game.get_r() < 0)
 
     def test_extended_game(self):
         game = LandlordGame(players=[RandomPlayer(name='random')] * 3)

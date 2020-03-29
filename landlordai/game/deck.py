@@ -1,8 +1,8 @@
 import random
 from collections import Counter
 
-from landlord.game.card import Card
-from landlord.game.move import SpecificMove, RankedMoveType, MoveType
+from landlordai.game.card import Card
+from landlordai.game.move import SpecificMove, RankedMoveType, MoveType
 
 
 class CardSet:

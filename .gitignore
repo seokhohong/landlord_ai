@@ -1,3 +1,4 @@
+dist/*
 *.zip
 spark/lai/*
 # Byte-compiled / optimized / DLL files

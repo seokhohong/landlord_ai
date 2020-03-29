@@ -1,18 +1,21 @@
 import random
+from collections import Counter
+from copy import copy
 
 import numpy as np
 
-from landlord.game.player import TurnPosition
-from landlord.game.deck import LandlordDeck, CardSet
-from landlord.game.move import SpecificMove, BetMove, KittyReveal
-from copy import deepcopy, copy
-from collections import Counter
+from landlordai.game.deck import LandlordDeck, CardSet
+from landlordai.game.move import SpecificMove, BetMove, KittyReveal
+from landlordai.game.player import TurnPosition
+
 
 class LandlordGame:
     MAX_BET = 3
     NUM_PLAYERS = 3
     KITTY_SIZE = 3
     DEAL_SIZE = 17
+    # games shouldn't go this long anyway
+    TURN_LIMIT = 99
     def __init__(self, players):
         self.players = players
         self.scores = [0] * 3
@@ -74,7 +77,7 @@ class LandlordGame:
         self.kitty = kitty
 
     def reveal_kitty(self):
-        # add the kitty to the landlord's hand
+        # add the kitty to the landlordai's hand
         self.hands[self.landlord_position] += self.kitty
         self.move_logs.append((self._current_position, KittyReveal(self.kitty)))
         self.betting_complete = True
@@ -152,7 +155,7 @@ class LandlordGame:
             # otherwise you have to play moves that beat it, or pass
             return [move for move in all_moves if move.beats(self.get_last_played())] + [None]
         else:
-            return [BetMove(0), BetMove(1), BetMove(2), BetMove(3), None]
+            return [BetMove(0), BetMove(1), BetMove(2), BetMove(3)]
 
     def get_game_logs(self):
         return self.move_logs
@@ -198,7 +201,7 @@ class LandlordGame:
             if self._current_position == self.landlord_position:
                 self.string_logs.append(str(self._current_position) + " wins as Landlord!")
                 self.winners = [self.landlord_position]
-                # landlord gains
+                # landlordai gains
                 self.scores[self._current_position] += self.bet_amount * 2
                 self.scores[self.peasant_positions[0]] -= self.bet_amount
                 self.scores[self.peasant_positions[1]] -= self.bet_amount
@@ -217,15 +220,16 @@ class LandlordGame:
     def player_has_won(self, position: TurnPosition):
         return np.argmax(self.scores) == position.index()
 
-    def get_r_from_perspective(self, position: TurnPosition):
+    def get_r(self):
         if not self.is_round_over():
             return 0
 
-        landlord_multiplier = 2 if position == self.landlord_position else 1
+        # landlord win is positive
+        if self.landlord_position in self.winners:
+            return self.bet_amount * 2
 
-        if position in self.winners:
-            return self.bet_amount * landlord_multiplier
-        return - self.bet_amount * landlord_multiplier
+        # peasant win is negative
+        return - self.bet_amount
 
     def get_scores(self):
         return copy(self.scores)
@@ -242,6 +246,8 @@ class LandlordGame:
                 print(self.hands[self._current_position])
             self.play_move(move)
             #print(self.hands)
+            if len(self.get_move_logs()) >= LandlordGame.TURN_LIMIT:
+                break
             if self.is_round_over():
                 break
 
