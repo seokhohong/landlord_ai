@@ -37,7 +37,7 @@ class TestLandlordMethods(unittest.TestCase):
         game.main_game()
         self.assertTrue(np.sum(np.abs(game.get_scores())) > 0)
         # game is over
-        self.assertTrue(np.abs(players[0].record_future_q[-1]) > 0.5)
+        self.assertTrue(np.abs(players[0]._record_future_q[-1]) > 0.5)
 
         self.assertTrue(np.allclose(players[0].derive_features(game)[:len(game.get_move_logs()) - 1],
                                     players[0].derive_record_features(game)[0][:len(game.get_move_logs()) - 1]))
@@ -73,6 +73,43 @@ class TestLandlordMethods(unittest.TestCase):
             self.assertTrue(np.sum(features[:, players[i].get_feature_index('I_AM_LANDLORD')]) != 0)
             # it is possible this guy never plays, eventually
             self.assertTrue(np.sum(features[:, players[i].get_feature_index('I_AM_BEFORE_LANDLORD')]) != 0)
+
+    def test_llord_winning(self):
+        players = [LearningPlayer_v1(name='random')] * 3
+        game = LandlordGame(players=players)
+        hands = {
+            TurnPosition.FIRST: [Card.ACE] * 4 + [Card.KING] * 4 + [Card.QUEEN] * 4 + [Card.JACK] * 4 + [Card.THREE],
+            TurnPosition.SECOND: [Card.TEN] * 4 + [Card.NINE] * 4 + [Card.EIGHT] * 4 + [Card.SEVEN] * 4 + [Card.THREE],
+            TurnPosition.THIRD: [Card.FIVE] * 4
+        }
+        game.betting_complete = True
+        game.force_setup(TurnPosition.THIRD, hands, 3)
+        game.main_game()
+        self.assertTrue(TurnPosition.THIRD in game.get_winners())
+        self.assertTrue(len(game.get_move_logs()) == 1)
+
+    def test_peasant_winning(self):
+        for i in range(10):
+            players = [LearningPlayer_v1(name='random')] * 3
+            game = LandlordGame(players=players)
+            hands = {
+                TurnPosition.FIRST: [Card.ACE] * 4,
+                TurnPosition.SECOND: [Card.TEN] + [Card.THREE],
+                TurnPosition.THIRD: [Card.FIVE] * 3 + [Card.THREE] + [Card.FOUR]
+            }
+            game.betting_complete = True
+            game.force_setup(TurnPosition.THIRD, hands, 3)
+            hand_vector = players[0].get_hand_vector(game, TurnPosition.FIRST)
+            self.assertTrue(hand_vector[11] == 4)
+            self.assertTrue(hand_vector[-2] == 2)
+            self.assertTrue(hand_vector[-3] == 5)
+            self.assertTrue(hand_vector[-1] == 4)
+            #self.assertTrue(np.sum(hand_vector) == 4)
+            game.main_game()
+            self.assertTrue(TurnPosition.THIRD not in game.get_winners())
+            self.assertTrue(TurnPosition.SECOND in game.get_winners())
+            self.assertTrue(TurnPosition.FIRST in game.get_winners())
+            self.assertTrue(len(game.get_move_logs()) == 2)
 
 if __name__ == '__main__':
     unittest.main()

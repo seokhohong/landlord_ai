@@ -56,15 +56,20 @@ class LearningPlayer_v1(Player):
     # 1: separate boolean for pass
     # 1: separate boolean for vault reveal
     TIMESTEP_FEATURES = len(Card) + 6
+    # appends the length of each player's hand
+    HAND_FEATURES = len(Card) + 3
 
-    def __init__(self, name, epsilon=0.1, net_files=None):
+    def __init__(self, name, epsilon=0.1, learning_rate=0.2, net_dir=None):
         super().__init__(name)
-        if net_files is None:
-            self.create_nnet()
-        else:
-            self.load_nnets(net_files)
 
-        self.epsilon = 0.1
+        self.empty_nets = False
+        if net_dir is None:
+            self.empty_nets=True
+        else:
+            self.load_nnets(net_dir)
+
+        self.epsilon = epsilon
+        self.learning_rate = learning_rate
         self.feature_index = self.make_feature_index()
 
         # elements for record
@@ -73,12 +78,14 @@ class LearningPlayer_v1(Player):
     def reset_records(self):
         self.record_history_matrices = []
         self.record_move_vectors = []
-        self.record_future_q = []
+        self._record_future_q = []
+        self.record_hand_vectors = []
 
-    def load_nnets(self, net_files):
-        self.history_net = keras.models.load_model(net_files[0])
-        self.position_net = keras.models.load_model(net_files[1])
+    def load_nnets(self, net_dir):
+        self.history_net = keras.models.load_model(net_dir + "/history.h5")
+        self.position_net = keras.models.load_model(net_dir + '/position.h5')
 
+    '''
     def create_nnet(self):
         # number of options we'll inference at once
         GRU_DIM = 64
@@ -91,10 +98,14 @@ class LearningPlayer_v1(Player):
 
         history_inp = Input((GRU_DIM, ))
         play_inp = Input((LearningPlayer_v1.TIMESTEP_FEATURES, ))
-        dense_1 = Dense(32, activation='relu')(Concatenate()([history_inp, play_inp]))
+        hand_inp = Input((LearningPlayer_v1.HAND_FEATURES, ))
+
+        dense_1 = Dense(32, activation='relu')(Concatenate()([history_inp, play_inp, hand_inp]))
         dense_2 = Dense(1, activation='linear')(dense_1)
-        self.position_net = keras.models.Model(inputs=[history_inp, play_inp], outputs=[dense_2])
-        self.position_net.compile(loss=mean_squared_error, optimizer='adam', metrics = ['mean_squared_error'])
+        self.position_net = keras.models.Model(inputs=[history_inp, play_inp, hand_inp], outputs=[dense_2])
+        self.position_net.compile(loss=mean_squared_error, optimizer='adam', metrics=['mean_squared_error'])
+
+    '''
 
     def make_feature_index(self):
         'maps card to feature index'
@@ -179,18 +190,31 @@ class LearningPlayer_v1(Player):
 
         return move_vector
 
-    # hard_clamp means we only consider win states to have value (useful when the network is not initialized)
-    def compute_state_value(self, game, has_won, hard_clamp=False):
-        if has_won:
-            return 1
-        if hard_clamp:
-            return 0
-        return self.history_net.predict(self.derive_features(game))
+    def get_hand_vector(self, game, player: TurnPosition):
+        hand = game.get_hand(player)
+        vector = np.zeros(len(Card) + 3)
+        for i, card in enumerate(Card):
+            vector[i] = hand.count(card)
+
+        if game.is_betting_complete():
+            vector[-3] = len(game.get_hand(game.get_landlord_position()))
+            vector[-2] = len(game.get_hand(game.get_landlord_position().previous()))
+            vector[-1] = len(game.get_hand(game.get_landlord_position().next()))
+        return vector
 
     def get_history_vector(self, features):
-        return self.history_net.predict(np.array([features]))[0]
+        if self.empty_nets:
+            return np.zeros(LearningPlayer_v1.TIMESTEP_FEATURES)
 
-    def decide_best_move(self, game, player: TurnPosition):
+        return self.history_net.predict(np.array([features]), batch_size=1024)[0]
+
+    def get_position_predictions(self, history_matrix, move_options_matrix, hand_matrix):
+        if self.empty_nets:
+            return np.zeros((move_options_matrix.shape[0]))
+
+        return self.position_net.predict([history_matrix, move_options_matrix, hand_matrix], batch_size=1024).reshape(move_options_matrix.shape[0])
+
+    def decide_best_move(self, game, player: TurnPosition, debug=False):
         assert len(game.get_hand(player)) > 0
         legal_moves = game.get_legal_moves(player)
 
@@ -200,12 +224,48 @@ class LearningPlayer_v1(Player):
         history_vector = self.get_history_vector(history_matrix)
         history_matrix = np.tile(history_vector, (len(legal_moves), 1))
 
+        # make the hand vector and copy it
+        hand_vector = self.get_hand_vector(game, player)
+        hand_matrix = np.tile(hand_vector, (len(legal_moves), 1))
+
         # create features for each of the possible moves from this position
-        move_options_matrix = np.vstack([self.compute_move_vector(game.get_current_position(), game.get_landlord_position(), move) for move in legal_moves])
+        move_options_matrix = np.vstack([self.compute_move_vector(game.get_current_position(),
+                                                                  game.get_landlord_position(), move) for move in legal_moves])
 
-        predictions = self.position_net.predict([history_matrix, move_options_matrix]).reshape(len(legal_moves))
+        predictions = self.get_position_predictions(history_matrix, move_options_matrix, hand_matrix)
 
-        best_move_index = np.argmax(predictions)
+        # if the move ends the game, then force-score the position
+        has_game_ending = False
+        for i, move in enumerate(legal_moves):
+            if game.move_ends_game(game, game.get_current_position(), move):
+                copy_game = copy(game)
+                copy_game.play_move(move)
+                predictions[i] = copy_game.get_r()
+                has_game_ending = True
+
+        best_move_index = 0
+        if player == game.get_landlord_position():
+            best_move_index = np.argmax(predictions)
+        elif game.is_betting_complete():
+            best_move_index = np.argmin(predictions)
+        else:
+            # go landlord if it's worth it, otherwise peasant
+            best_move_index = np.argmax(np.abs(predictions))
+
+        if debug:
+            print('Is Landlord', player == game.get_landlord_position())
+            print('Player', player)
+            print('Name', self.get_name())
+            print('Hand', game.get_hand(player))
+            for move, pred in sorted(list(zip(legal_moves, predictions)), key=lambda x : x[1]):
+                print(pred, move)
+            print('Made Move', legal_moves[best_move_index])
+
+        if random.random() < self.epsilon and not has_game_ending:
+            best_move_index = random.randint(0, len(predictions) - 1)
+            if debug:
+                print('Randomed', legal_moves[best_move_index])
+
         best_move = legal_moves[best_move_index]
         best_move_q = predictions[best_move_index]
 
@@ -215,14 +275,15 @@ class LearningPlayer_v1(Player):
         return self.make_move(game, player)
 
     def make_move(self, game, player: TurnPosition):
-        best_move, _ = self.decide_best_move(game, player)
+        best_move, best_move_q = self.decide_best_move(game, player, debug=True)
 
-        self.record_move(game, best_move, player)
+        self.record_move(game, best_move, best_move_q, player)
 
         return best_move
 
-    def record_move(self, game, best_move, player: TurnPosition):
+    def record_move(self, game, best_move, best_move_q, player: TurnPosition):
         previous_history_matrix, move_vector = self.derive_record_features(game)
+        hand_vector = self.get_hand_vector(game, player)
 
         copy_game = copy(game)
         copy_game.play_move(best_move)
@@ -234,11 +295,16 @@ class LearningPlayer_v1(Player):
             if copy_game.is_round_over():
                 future_reward = copy_game.get_r()
             else:
-                future_reward = best_next_move_q + copy_game.get_r()
+                future_reward = best_next_move_q
 
         self.record_history_matrices.append(previous_history_matrix)
         self.record_move_vectors.append(move_vector)
-        self.record_future_q.append(future_reward)
+        self.record_hand_vectors.append(hand_vector)
+
+        # take old value and move by the newly learned value
+        q_update = (1 - self.learning_rate) * best_move_q + self.learning_rate * future_reward
+
+        self._record_future_q.append(q_update)
 
     def get_record_history_matrices(self):
         return self.record_history_matrices
@@ -246,9 +312,20 @@ class LearningPlayer_v1(Player):
     def get_record_move_vectors(self):
         return self.record_move_vectors
 
-    def get_future_q(self):
-        return self.record_future_q
+    def get_record_hand_vectors(self):
+        return self.record_hand_vectors
 
+    def get_future_q(self):
+        return self._record_future_q
+
+    def get_name(self):
+        return self.name
+
+    def __str__(self):
+        return self.get_name()
+
+    def __repr__(self):
+        return self.__str__()
 
 class RandomPlayer(Player):
     def make_bet(self, game, player: TurnPosition):

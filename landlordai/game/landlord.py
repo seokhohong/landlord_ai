@@ -217,6 +217,12 @@ class LandlordGame:
             return True
         return False
 
+    def move_ends_game(self, game, player: TurnPosition, move):
+        if move is not None and type(move) == SpecificMove:
+            return game.get_current_position() == player and sum(move.cards.values()) == len(game.get_hand(player))
+
+        return False
+
     def player_has_won(self, position: TurnPosition):
         return np.argmax(self.scores) == position.index()
 
@@ -269,6 +275,18 @@ class LandlordGame:
     def has_winners(self):
         return self.winners is not None
 
+    def get_winners(self):
+        return self.winners
+
+    def get_winner_ais(self):
+        return [self.get_ai(pos) for pos in self.winners]
+
+    def get_loser_ais(self):
+        return [self.get_ai(pos) for pos in list(TurnPosition) if pos not in self.winners]
+
     def get_ai(self, pos: TurnPosition):
         return self.players[pos]
+
+    def get_ai_players(self):
+        return self.players
 
