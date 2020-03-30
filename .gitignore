@@ -1,3 +1,6 @@
+landlordai/models/*
+*.h5
+*.pkl
 dist/*
 *.zip
 spark/lai/*
