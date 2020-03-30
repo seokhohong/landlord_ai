@@ -59,17 +59,18 @@ class LearningPlayer_v1(Player):
     # appends the length of each player's hand
     HAND_FEATURES = len(Card) + 3
 
-    def __init__(self, name, epsilon=0.1, learning_rate=0.2, net_dir=None):
+    def __init__(self, name, epsilon=0.1, learning_rate=0.2, discount_factor=0.8, net_dir=None):
         super().__init__(name)
 
+        self.epsilon = epsilon
         self.empty_nets = False
         if net_dir is None:
-            self.empty_nets=True
+            self.empty_nets = True
         else:
             self.load_nnets(net_dir)
 
-        self.epsilon = epsilon
         self.learning_rate = learning_rate
+        self.discount_factor = discount_factor
         self.feature_index = self.make_feature_index()
 
         # elements for record
@@ -204,13 +205,13 @@ class LearningPlayer_v1(Player):
 
     def get_history_vector(self, features):
         if self.empty_nets:
-            return np.zeros(LearningPlayer_v1.TIMESTEP_FEATURES)
+            return np.random.random(LearningPlayer_v1.TIMESTEP_FEATURES) * 0.01
 
         return self.history_net.predict(np.array([features]), batch_size=1024)[0]
 
     def get_position_predictions(self, history_matrix, move_options_matrix, hand_matrix):
         if self.empty_nets:
-            return np.zeros((move_options_matrix.shape[0]))
+            return np.random.random((move_options_matrix.shape[0])) * 0.01
 
         return self.position_net.predict([history_matrix, move_options_matrix, hand_matrix], batch_size=1024).reshape(move_options_matrix.shape[0])
 
@@ -302,7 +303,8 @@ class LearningPlayer_v1(Player):
         self.record_hand_vectors.append(hand_vector)
 
         # take old value and move by the newly learned value
-        q_update = (1 - self.learning_rate) * best_move_q + self.learning_rate * future_reward
+        #q_update = (1 - self.learning_rate) * best_move_q + self.learning_rate * future_reward
+        q_update = best_move_q + self.learning_rate * (self.discount_factor * future_reward - best_move_q)
 
         self._record_future_q.append(q_update)
 

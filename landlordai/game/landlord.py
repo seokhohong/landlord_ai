@@ -91,6 +91,9 @@ class LandlordGame:
             if bet is not None and bet.get_amount() == LandlordGame.MAX_BET:
                 self._current_position = self.landlord_position
                 break
+            # everyone's had a chance to bet
+            if bet is not None and bet.get_amount() > 0 and i >= LandlordGame.NUM_PLAYERS:
+                break
 
         # if nobody bet
         if self.bet_amount == 0:

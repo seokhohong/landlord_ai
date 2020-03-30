@@ -71,7 +71,7 @@ class TestLandlordMethods(unittest.TestCase):
         self.assertTrue(np.sum(feature_matrix) == 7)
 
     def test_betting(self):
-        players = [LearningPlayer_v1('v1', None)] * 3
+        players = [LearningPlayer_v1('v1')] * 3
         game = LandlordGame(players=players)
         game.force_current_position(TurnPosition.SECOND)
         game.force_kitty([Card.LITTLE_JOKER, Card.BIG_JOKER, Card.THREE])
@@ -91,7 +91,7 @@ class TestLandlordMethods(unittest.TestCase):
         self.assertTrue(np.sum(players[1].derive_features(game)) == 16)
 
     def test_landlord_game_ending(self):
-        players = [LearningPlayer_v1('v1', None)] * 3
+        players = [LearningPlayer_v1('v1')] * 3
         game = LandlordGame(players=players)
         hands = {
             TurnPosition.FIRST: [Card.ACE] * 4,
@@ -105,6 +105,20 @@ class TestLandlordMethods(unittest.TestCase):
         self.assertFalse(game.move_ends_game(game, TurnPosition.SECOND,
                                              SpecificMove(RankedMoveType(MoveType.BOMB, Card.TEN),
                                                           Counter({Card.TEN: 4}))))
+
+    def test_endgame_scenario(self):
+        players = [LearningPlayer_v1('v1')] * 3
+        game = LandlordGame(players=players)
+        hands = {
+            TurnPosition.FIRST: [Card.ACE] * 1,
+            TurnPosition.SECOND: [Card.TEN] * 1,
+            TurnPosition.THIRD: [Card.JACK, Card.QUEEN]
+        }
+        game.betting_complete = True
+        game.force_setup(TurnPosition.THIRD, hands, 2)
+        game.main_game()
+        self.assertTrue(TurnPosition.FIRST in game.get_winners())
+        self.assertTrue(len(game.get_move_logs()) == 2)
 
 if __name__ == '__main__':
     unittest.main()
