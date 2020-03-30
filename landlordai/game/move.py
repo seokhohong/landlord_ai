@@ -12,6 +12,12 @@ class BetMove:
     def get_amount(self):
         return self.amount
 
+    def __str__(self):
+        return "BetMove (" + str(self.amount) + ")"
+
+    def __repr__(self):
+        return self.__str__()
+
 class KittyReveal:
     def __init__(self, cards):
         self.cards = cards

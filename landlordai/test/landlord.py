@@ -65,7 +65,7 @@ class TestLandlordMethods(unittest.TestCase):
         game.play_move(SpecificMove(RankedMoveType(MoveType.BOMB, Card.KING), cards=Counter({Card.KING: 4})))
         self.assertTrue(game.get_current_position() == TurnPosition.SECOND)
         feature_matrix = players[1].derive_features(game)
-        self.assertTrue(feature_matrix[0][-5] == 1)
+        self.assertTrue(feature_matrix[0][-6] == 1)
         self.assertTrue(feature_matrix[0][-2] == 1)
         self.assertTrue(feature_matrix[1][10] == 4)
         self.assertTrue(np.sum(feature_matrix) == 7)
@@ -89,6 +89,22 @@ class TestLandlordMethods(unittest.TestCase):
         feature_matrix = players[1].derive_features(game)
         self.assertTrue(feature_matrix[0][-3] == 2)
         self.assertTrue(np.sum(players[1].derive_features(game)) == 16)
+
+    def test_landlord_game_ending(self):
+        players = [LearningPlayer_v1('v1', None)] * 3
+        game = LandlordGame(players=players)
+        hands = {
+            TurnPosition.FIRST: [Card.ACE] * 4,
+            TurnPosition.SECOND: [Card.TEN] * 4,
+            TurnPosition.THIRD: [Card.FIVE] * 4
+        }
+        game.betting_complete = True
+        game.force_setup(TurnPosition.THIRD, hands, 2)
+        self.assertTrue(game.move_ends_game(game, TurnPosition.THIRD, SpecificMove(RankedMoveType(MoveType.BOMB, Card.FIVE), Counter({Card.FIVE: 4}))))
+        self.assertFalse(game.move_ends_game(game, TurnPosition.SECOND, SpecificMove(RankedMoveType(MoveType.BOMB, Card.FIVE), Counter({Card.FIVE: 4}))))
+        self.assertFalse(game.move_ends_game(game, TurnPosition.SECOND,
+                                             SpecificMove(RankedMoveType(MoveType.BOMB, Card.TEN),
+                                                          Counter({Card.TEN: 4}))))
 
 if __name__ == '__main__':
     unittest.main()
