@@ -36,14 +36,14 @@ class LandlordGame:
         result.hands = dict((k, copy(v)) for (k, v) in self.hands.items())
         return result
 
-    def play_round(self):
+    def play_round(self, debug=False):
         self.setup()
         self.bet_rounds()
         if self.round_over:
             return None
         self.set_peasants()
         self.reveal_kitty()
-        self.main_game()
+        self.main_game(debug=debug)
 
     def setup(self):
         self.last_played = None
@@ -223,7 +223,7 @@ class LandlordGame:
     def move_ends_game(self, move):
         player = self.get_current_position()
         if move is not None and type(move) == SpecificMove:
-            return self.get_current_position() == player and sum(move.cards.values()) == len(self.get_hand(player))
+            return self.get_current_position() == player and move.cards == Counter(self.get_hand(player))
 
         return False
 
@@ -248,12 +248,7 @@ class LandlordGame:
         self.control_position = self.landlord_position
         self._current_position = self.landlord_position
         while True:
-            move = self.get_current_player().make_move(self, self._current_position)
-            if debug:
-                print(self._current_position)
-                print(move)
-                print(self.hands)
-                print(self.hands[self._current_position])
+            move = self.get_current_player().make_move(self, self._current_position, debug=True)
             self.play_move(move)
             #print(self.hands)
             if len(self.get_move_logs()) >= LandlordGame.TURN_LIMIT:

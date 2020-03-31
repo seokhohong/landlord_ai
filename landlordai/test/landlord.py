@@ -101,9 +101,7 @@ class TestLandlordMethods(unittest.TestCase):
         game.betting_complete = True
         game.force_setup(TurnPosition.THIRD, hands, 2)
         self.assertTrue(game.move_ends_game(SpecificMove(RankedMoveType(MoveType.BOMB, Card.FIVE), Counter({Card.FIVE: 4}))))
-        self.assertFalse(game.move_ends_game(SpecificMove(RankedMoveType(MoveType.BOMB, Card.FIVE), Counter({Card.FIVE: 4}))))
-        self.assertFalse(game.move_ends_game(SpecificMove(RankedMoveType(MoveType.BOMB, Card.TEN),
-                                                          Counter({Card.TEN: 4}))))
+        self.assertFalse(game.move_ends_game(SpecificMove(RankedMoveType(MoveType.BOMB, Card.TEN), Counter({Card.TEN: 4}))))
 
     def test_endgame_scenario(self):
         players = [LearningPlayer_v1('v1')] * 3
@@ -118,6 +116,19 @@ class TestLandlordMethods(unittest.TestCase):
         game.main_game()
         self.assertTrue(TurnPosition.FIRST in game.get_winners())
         self.assertTrue(len(game.get_move_logs()) == 2)
+
+    def test_landlord_bombing(self):
+        players = [LearningPlayer_v1('v1')] * 3
+        game = LandlordGame(players=players)
+        hands = {
+            TurnPosition.FIRST: [Card.ACE] * 4 + [Card.THREE],
+            TurnPosition.SECOND: [Card.TEN] * 4 + [Card.THREE],
+            TurnPosition.THIRD: [Card.FIVE] * 4 + [Card.THREE]
+        }
+        game.betting_complete = True
+        game.force_setup(TurnPosition.THIRD, hands, 2)
+        game.play_move(SpecificMove(RankedMoveType(MoveType.BOMB, Card.FIVE), Counter({Card.FIVE: 4})))
+        self.assertTrue(game.bet_amount == 4)
 
 if __name__ == '__main__':
     unittest.main()

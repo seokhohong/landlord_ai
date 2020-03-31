@@ -279,8 +279,8 @@ class LearningPlayer_v1(Player):
     def make_bet(self, game, player: TurnPosition):
         return self.make_move(game, player)
 
-    def make_move(self, game, player: TurnPosition):
-        best_move, best_move_q = self.decide_best_move(game, player, debug=True)
+    def make_move(self, game, player: TurnPosition, debug=False):
+        best_move, best_move_q = self.decide_best_move(game, player, debug=debug)
 
         self.record_move(game, best_move, best_move_q, player)
 
@@ -292,7 +292,7 @@ class LearningPlayer_v1(Player):
 
         copy_game = copy(game)
         copy_game.play_move(best_move)
-        if copy_game.is_round_over():
+        if game.move_ends_game(best_move):
             future_reward = copy_game.get_r()
         else:
             best_next_move, best_next_move_q = self.decide_best_move(copy_game, player.next())
@@ -308,14 +308,21 @@ class LearningPlayer_v1(Player):
 
         # take old value and move by the newly learned value
         #q_update = (1 - self.learning_rate) * best_move_q + self.learning_rate * future_reward
-        if np.abs(best_move_q - future_reward) > 1 and  len(game.get_game_logs()) < 7:
+        '''
+        if np.abs(best_move_q - future_reward) > 1 and len(game.get_game_logs()) < 7:
             assert False
             print('Diff')
             composite = keras.models.load_model('combined15.h5')
             composite.predict(x=[np.array([self.derive_features(copy_game)]), np.array([move_vector]), np.array([hand_vector])])
             self.decide_best_move(copy_game, player.next())
+        '''
         q_update = best_move_q + self.learning_rate * (self.discount_factor * future_reward - best_move_q)
 
+        if np.abs(q_update) > 0.3 and len(game.get_game_logs()) < 4:
+            print('Diff')
+            composite = keras.models.load_model('../models/combined15.h5')
+            composite.predict(x=[np.array([self.derive_features(copy_game)]), np.array([move_vector]), np.array([hand_vector])])
+            self.decide_best_move(copy_game, player.next())
         self._record_future_q.append(q_update)
 
     def get_record_history_matrices(self):

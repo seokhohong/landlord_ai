@@ -4,6 +4,10 @@ from landlordai.sim.game_stats import GameStats
 from landlordai.sim.simulate import Simulator
 
 import numpy as np
+from tqdm import tqdm
+
+def load_net(net):
+    return LearningPlayer_v1(name=net, net_dir='../models/' + net)
 
 if __name__ == "__main__":
     '''
@@ -13,10 +17,12 @@ if __name__ == "__main__":
               [LearningPlayer_v1(name='3_29_sim7_model' + str(i), net_dir='../models/3_29_sim7_model' + str(i))
     for i in range(3)]
     '''
-    players = [LearningPlayer_v1('random') for i in range(3)]
+    players = [LearningPlayer_v1('random') for i in range(1)] + \
+            [load_net('3_30_sim5_model15'), load_net('3_30_sim5_model3'), load_net('3_30_sim5_model1'), load_net('3_30_sim5_model0')]
 
-    simulator = Simulator(1, players)
-    simulator.play_rounds()
+    for i in tqdm(range(1000)):
+        simulator = Simulator(5, players)
+        simulator.play_rounds()
 
     results = simulator.get_result_pairs()
 

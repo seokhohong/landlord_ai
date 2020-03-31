@@ -119,7 +119,7 @@ class SpecificMove:
         return self.ranked_move_type.beats(other.ranked_move_type)
 
     def is_bomb(self):
-        return self.ranked_move_type == MoveType.BOMB
+        return self.ranked_move_type.move_type == MoveType.BOMB
 
     def __str__(self):
         return str(self.ranked_move_type) + '(' + str(self.cards) + ')'
