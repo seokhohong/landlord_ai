@@ -100,10 +100,9 @@ class TestLandlordMethods(unittest.TestCase):
         }
         game.betting_complete = True
         game.force_setup(TurnPosition.THIRD, hands, 2)
-        self.assertTrue(game.move_ends_game(game, TurnPosition.THIRD, SpecificMove(RankedMoveType(MoveType.BOMB, Card.FIVE), Counter({Card.FIVE: 4}))))
-        self.assertFalse(game.move_ends_game(game, TurnPosition.SECOND, SpecificMove(RankedMoveType(MoveType.BOMB, Card.FIVE), Counter({Card.FIVE: 4}))))
-        self.assertFalse(game.move_ends_game(game, TurnPosition.SECOND,
-                                             SpecificMove(RankedMoveType(MoveType.BOMB, Card.TEN),
+        self.assertTrue(game.move_ends_game(SpecificMove(RankedMoveType(MoveType.BOMB, Card.FIVE), Counter({Card.FIVE: 4}))))
+        self.assertFalse(game.move_ends_game(SpecificMove(RankedMoveType(MoveType.BOMB, Card.FIVE), Counter({Card.FIVE: 4}))))
+        self.assertFalse(game.move_ends_game(SpecificMove(RankedMoveType(MoveType.BOMB, Card.TEN),
                                                           Counter({Card.TEN: 4}))))
 
     def test_endgame_scenario(self):

@@ -1,4 +1,5 @@
 landlordai/models/*
+*.DS_store
 *.h5
 *.pkl
 dist/*

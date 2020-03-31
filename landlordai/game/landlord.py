@@ -220,9 +220,10 @@ class LandlordGame:
             return True
         return False
 
-    def move_ends_game(self, game, player: TurnPosition, move):
+    def move_ends_game(self, move):
+        player = self.get_current_position()
         if move is not None and type(move) == SpecificMove:
-            return game.get_current_position() == player and sum(move.cards.values()) == len(game.get_hand(player))
+            return self.get_current_position() == player and sum(move.cards.values()) == len(self.get_hand(player))
 
         return False
 

@@ -201,6 +201,10 @@ class LearningPlayer_v1(Player):
             vector[-3] = len(game.get_hand(game.get_landlord_position()))
             vector[-2] = len(game.get_hand(game.get_landlord_position().previous()))
             vector[-1] = len(game.get_hand(game.get_landlord_position().next()))
+        else:
+            vector[-3] = 17
+            vector[-2] = 17
+            vector[-1] = 17
         return vector
 
     def get_history_vector(self, features):
@@ -219,10 +223,10 @@ class LearningPlayer_v1(Player):
         assert len(game.get_hand(player)) > 0
         legal_moves = game.get_legal_moves(player)
 
-        history_matrix = self.derive_features(game)
+        history_features = self.derive_features(game)
 
         # all the moves we make from here will not affect the history, so assess it and copy
-        history_vector = self.get_history_vector(history_matrix)
+        history_vector = self.get_history_vector(history_features)
         history_matrix = np.tile(history_vector, (len(legal_moves), 1))
 
         # make the hand vector and copy it
@@ -238,7 +242,7 @@ class LearningPlayer_v1(Player):
         # if the move ends the game, then force-score the position
         has_game_ending = False
         for i, move in enumerate(legal_moves):
-            if game.move_ends_game(game, game.get_current_position(), move):
+            if game.move_ends_game(move):
                 copy_game = copy(game)
                 copy_game.play_move(move)
                 predictions[i] = copy_game.get_r()
@@ -292,8 +296,8 @@ class LearningPlayer_v1(Player):
             future_reward = copy_game.get_r()
         else:
             best_next_move, best_next_move_q = self.decide_best_move(copy_game, player.next())
-            copy_game.play_move(best_next_move)
-            if copy_game.is_round_over():
+            if copy_game.move_ends_game(best_next_move):
+                copy_game.play_move(best_next_move)
                 future_reward = copy_game.get_r()
             else:
                 future_reward = best_next_move_q
@@ -304,6 +308,12 @@ class LearningPlayer_v1(Player):
 
         # take old value and move by the newly learned value
         #q_update = (1 - self.learning_rate) * best_move_q + self.learning_rate * future_reward
+        if np.abs(best_move_q - future_reward) > 1 and  len(game.get_game_logs()) < 7:
+            assert False
+            print('Diff')
+            composite = keras.models.load_model('combined15.h5')
+            composite.predict(x=[np.array([self.derive_features(copy_game)]), np.array([move_vector]), np.array([hand_vector])])
+            self.decide_best_move(copy_game, player.next())
         q_update = best_move_q + self.learning_rate * (self.discount_factor * future_reward - best_move_q)
 
         self._record_future_q.append(q_update)

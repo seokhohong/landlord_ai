@@ -111,6 +111,7 @@ class TestLandlordMethods(unittest.TestCase):
             self.assertTrue(TurnPosition.FIRST in game.get_winners())
             self.assertTrue(len(game.get_move_logs()) == 2)
 
+
 if __name__ == '__main__':
     unittest.main()
 
