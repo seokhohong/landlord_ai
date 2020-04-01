@@ -5,6 +5,7 @@ from landlordai.game.player import TurnPosition
 import math
 
 class GameStats:
+    ELO_K = 10
     def __init__(self, player_pool, game_record):
         self.player_pool = player_pool
 
@@ -22,11 +23,25 @@ class GameStats:
             self.loss_matrix[self.player_map[loser], self.player_map[winner]] += 1
             self.process_elo(winner, loser)
 
-    def process_elo(self, winner, loser):
+    @classmethod
+    def elo_expected(cls, a, b):
+        return 1. / (1 + math.pow(10, (b - a) / 400))
+
+    def process_elo(self, winner: str, loser: str):
         elo_winner = self.elos[self.player_map[winner]]
         elo_loser = self.elos[self.player_map[loser]]
 
-        update = 1 / (1 + math.pow(10, (elo_winner - elo_loser) / 400))
+        winner_expected = GameStats.elo_expected(elo_winner, elo_loser)
+        loser_expected = GameStats.elo_expected(elo_loser, elo_winner)
+
+        update_winner = elo_winner + GameStats.ELO_K * (1 - winner_expected)
+        update_loser = elo_loser + GameStats.ELO_K * (0 - loser_expected)
+
+        self.elos[self.player_map[winner]] = update_winner
+        self.elos[self.player_map[loser]] = update_loser
+
+    def get_elo(self, player_name: str):
+        return self.elos[self.player_map[player_name]]
 
     def get_win_rate(self, player_name: str):
         player_index = self.player_map[player_name]

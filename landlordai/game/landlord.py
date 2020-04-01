@@ -84,7 +84,7 @@ class LandlordGame:
     def bet_rounds(self):
         # limit number of steps to check for draw
         while not self.betting_complete:
-            bet = self.get_current_player().make_bet(self, self.get_current_position())
+            bet = self.get_current_player().make_move(self)
             self.make_bet_move(bet)
 
     '''
@@ -248,6 +248,13 @@ class LandlordGame:
     def player_has_won(self, position: TurnPosition):
         return np.argmax(self.scores) == position.index()
 
+    def get_position_role_name(self, position):
+        if not self.is_betting_complete():
+            return 'UNDECIDED'
+        if position == self.landlord_position:
+            return 'LANDLORD'
+        return 'PEASANT'
+
     def get_r(self):
         # the game never got played
         if self.winners is None:
@@ -267,7 +274,7 @@ class LandlordGame:
         self.control_position = self.landlord_position
         self._current_position = self.landlord_position
         while True:
-            move = self.get_current_player().make_move(self, self._current_position, debug=True)
+            move = self.get_current_player().make_move(self, debug=debug)
             self.play_move(move)
             #print(self.hands)
             if len(self.get_move_logs()) >= LandlordGame.TURN_LIMIT:

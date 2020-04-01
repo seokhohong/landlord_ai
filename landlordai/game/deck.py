@@ -94,6 +94,7 @@ class CardSet:
 
     # use num_cards=2 for pairs, num_cards=3 for triples, etc.
     def _get_straights_from(self, card, num_cards=1):
+        consecutives_required = 5 if num_cards == 1 else 3
         moves = []
         consecutive = 1
         cards_included = Counter({card: num_cards})
@@ -104,7 +105,7 @@ class CardSet:
                 card = card.next()
             else:
                 break
-            if consecutive >= 5:
+            if consecutive >= consecutives_required:
                 assert(len(cards_included) == consecutive)
                 moves.append(SpecificMove(RankedMoveType(MoveType.get_straight_of_length(consecutive, num_cards), card), cards_included.copy()))
         return moves

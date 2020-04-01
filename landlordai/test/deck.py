@@ -62,6 +62,14 @@ class TestLandlordMethods(unittest.TestCase):
                                 Card.LITTLE_JOKER: 1, Card.BIG_JOKER: 1}))
         self.assertTrue(len(hand.get_all_moves()) == 19)
 
+    def test_chains(self):
+        hand = CardSet(Counter({Card.THREE: 2, Card.FOUR: 3, Card.FIVE: 2}))
+        self.assertTrue(len(hand._get_straights_from(Card.THREE, num_cards=2)) == 1)
+
+    def test_chains2(self):
+        hand = CardSet(Counter({Card.THREE: 2, Card.FOUR: 3, Card.FIVE: 2, Card.SIX: 2}))
+        self.assertTrue(len(hand._get_straights_from(Card.THREE, num_cards=2)) == 3)
+
 
 if __name__ == '__main__':
     unittest.main()

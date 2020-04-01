@@ -40,12 +40,8 @@ class Player:
     def __init__(self, name):
         self.name = name
 
-    # returns None for pass
-    def make_bet(self, game, player: TurnPosition):
-        return None
-
     # returns None for pass, otherwise returns a SpecificMove
-    def make_move(self, game, player: TurnPosition):
+    def make_move(self, game):
         pass
 
 class LearningPlayer_v1(Player):
@@ -60,13 +56,14 @@ class LearningPlayer_v1(Player):
     HAND_FEATURES = len(Card) + 3
 
     def __init__(self, name, net_dir=None, epsilon=0.1, learning_rate=0.2, discount_factor=0.8,
-                  use_montecarlo_random=True, random_mc_num_explorations=30):
+                  use_montecarlo_random=True, random_mc_num_explorations=30, mc_best_move_depth=1):
         super().__init__(name)
 
         self.epsilon = epsilon
         self.empty_nets = False
         self.use_montecarlo_random = use_montecarlo_random
         self.random_mc_num_explorations = random_mc_num_explorations
+        self.mc_best_move_depth = mc_best_move_depth
         if net_dir is None:
             self.empty_nets = True
         else:
@@ -222,8 +219,8 @@ class LearningPlayer_v1(Player):
 
         return self.position_net.predict([history_matrix, move_options_matrix, hand_matrix], batch_size=1024).reshape(move_options_matrix.shape[0])
 
-    def decide_best_move(self, game, player: TurnPosition, debug=False):
-        assert len(game.get_hand(player)) > 0
+    def decide_best_move(self, game, debug=False):
+        assert len(game.get_hand(game.get_current_position())) > 0
         legal_moves = game.get_legal_moves()
 
         history_features = self.derive_features(game)
@@ -233,7 +230,7 @@ class LearningPlayer_v1(Player):
         history_matrix = np.tile(history_vector, (len(legal_moves), 1))
 
         # make the hand vector and copy it
-        hand_vector = self.get_hand_vector(game, player)
+        hand_vector = self.get_hand_vector(game, game.get_current_position())
         hand_matrix = np.tile(hand_vector, (len(legal_moves), 1))
 
         # create features for each of the possible moves from this position
@@ -252,7 +249,7 @@ class LearningPlayer_v1(Player):
                 has_game_ending = True
 
         best_move_index = 0
-        if player == game.get_landlord_position():
+        if game.get_current_position() == game.get_landlord_position():
             best_move_index = np.argmax(predictions)
         elif game.is_betting_complete():
             best_move_index = np.argmin(predictions)
@@ -261,10 +258,8 @@ class LearningPlayer_v1(Player):
             best_move_index = np.argmax(np.abs(predictions))
 
         if debug:
-            print('Is Landlord', player == game.get_landlord_position())
-            print('Player', player)
-            print('Name', self.get_name())
-            print('Hand', game.get_hand(player))
+            print('(' +  game.get_position_role_name(game.get_current_position()) + ') Player', self.get_name())
+            print('Hand', game.get_hand(game.get_current_position()))
             for move, pred in sorted(list(zip(legal_moves, predictions)), key=lambda x : x[1]):
                 print(pred, move)
             print('Made Move', legal_moves[best_move_index])
@@ -279,13 +274,10 @@ class LearningPlayer_v1(Player):
 
         return best_move, best_move_q
 
-    def make_bet(self, game, player: TurnPosition):
-        return self.make_move(game, player)
+    def make_move(self, game, debug=False):
+        best_move, best_move_q = self.decide_best_move(game, debug=debug)
 
-    def make_move(self, game, player: TurnPosition, debug=False):
-        best_move, best_move_q = self.decide_best_move(game, player, debug=debug)
-
-        self.record_move(game, best_move, best_move_q, player)
+        self.record_move(game, best_move, best_move_q, game.get_current_position())
 
         return best_move
 
@@ -296,9 +288,9 @@ class LearningPlayer_v1(Player):
         copy_game = copy(game)
         best_next_move_q = 0
         for i in range(depth):
-            best_next_move, best_next_move_q = self.decide_best_move(copy_game, copy_game.get_current_position())
+            best_next_move, best_next_move_q = self.decide_best_move(copy_game)
             if copy_game.move_ends_game(best_next_move):
-                return copy_game.get_r()
+                return best_next_move_q
             else:
                 copy_game.play_move(best_next_move)
 
@@ -308,11 +300,9 @@ class LearningPlayer_v1(Player):
         reward_values = []
         for i in range(num_explorations):
             copy_game = copy(game)
-            j = 0
             while not copy_game.is_round_over():
                 move = random.choice(copy_game.get_legal_moves())
                 copy_game.play_move(move)
-                j += 1
             reward_values.append(copy_game.get_r())
         return np.mean(reward_values)
 
@@ -323,14 +313,14 @@ class LearningPlayer_v1(Player):
         hand_vector = self.get_hand_vector(game, player)
 
         copy_game = copy(game)
-        copy_game.play_move(best_move)
-        if game.move_ends_game(best_move):
+        if copy_game.move_ends_game(best_move):
             future_reward = copy_game.get_r()
         else:
+            copy_game.play_move(best_move)
             if self.use_montecarlo_random:
-                future_reward = self.monte_carlo_random_search(game, num_explorations=self.random_mc_num_explorations)
+                future_reward = self.monte_carlo_random_search(copy_game, num_explorations=self.random_mc_num_explorations)
             else:
-                future_reward = self.monte_carlo_best_search(game, depth=1)
+                future_reward = self.monte_carlo_best_search(copy_game, depth=self.mc_best_move_depth)
 
         self.record_history_matrices.append(history_matrix)
         self.record_move_vectors.append(move_vector)
@@ -364,24 +354,10 @@ class LearningPlayer_v1(Player):
         return self.__str__()
 
 class RandomPlayer(Player):
-    def make_bet(self, game, player: TurnPosition):
-        if game.get_bet_amount() < game.MAX_BET:
-            return BetMove(game.get_bet_amount() + 1)
-        return None
-
-    def make_move(self, game, player: TurnPosition, debug=False):
-        hand = CardSet(Counter(game.get_hand(player)))
-        all_moves = hand.get_all_moves()
-        if game.get_control_position() != player:
-            legal_moves = [move for move in all_moves if move.beats(game.get_last_played())]
-        else:
-            # we have control
-            legal_moves = all_moves
-
-        if len(legal_moves) == 0:
-            return None
+    def make_move(self, game, debug=False):
+        legal_moves = game.get_legal_moves()
         return random.choice(legal_moves)
 
 class NoBetPlayer(Player):
-    def make_bet(self, game, player: TurnPosition):
+    def make_move(self, game):
         return None

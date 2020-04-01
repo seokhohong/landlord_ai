@@ -7,7 +7,7 @@ import numpy as np
 from tqdm import tqdm
 
 def load_net(net):
-    return LearningPlayer_v1(name=net, net_dir='../models/' + net)
+    return LearningPlayer_v1(name=net, net_dir='../models/' + net, use_montecarlo_random=False)
 
 if __name__ == "__main__":
     '''
@@ -17,21 +17,21 @@ if __name__ == "__main__":
               [LearningPlayer_v1(name='3_29_sim7_model' + str(i), net_dir='../models/3_29_sim7_model' + str(i))
     for i in range(3)]
     '''
-    players = [LearningPlayer_v1('random') for i in range(1)] + \
-            [load_net('3_30_sim5_model15'), load_net('3_30_sim5_model3'), load_net('3_30_sim5_model1'), load_net('3_30_sim5_model0')]
+    players = [LearningPlayer_v1('random', use_montecarlo_random=False) for i in range(1)] + \
+            [load_net('4_1_sim3_model1'), load_net('4_1_sim3_model0'), load_net('4_1_sim3_model6')]
 
-    for i in tqdm(range(1000)):
-        simulator = Simulator(5, players)
+    for i in tqdm(range(1)):
+        simulator = Simulator(10, players)
         simulator.play_rounds()
 
-    results = simulator.get_result_pairs()
+        results = simulator.get_result_pairs()
 
     stats = GameStats(players, results)
 
     unique_names = set([player.get_name() for player in players])
 
     for name in unique_names:
-        print(name, stats.get_win_rate(name))
+        print(name, stats.get_win_rate(name), stats.get_elo(name))
 
     #game = LandlordGame(players=players)
     #game.play_round()
