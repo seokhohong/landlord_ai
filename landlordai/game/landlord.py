@@ -77,6 +77,7 @@ class LandlordGame:
     def reveal_kitty(self):
         # add the kitty to the landlord's hand
         self.hands[self.landlord_position] += self.kitty
+        self.hands[self.landlord_position] = sorted(self.hands[self.landlord_position])
         self.move_logs.append((self._current_position, KittyReveal(self.kitty)))
         assert len(self.get_hand(self.landlord_position)) == LandlordGame.KITTY_SIZE + LandlordGame.DEAL_SIZE
 

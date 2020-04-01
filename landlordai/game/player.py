@@ -59,12 +59,14 @@ class LearningPlayer_v1(Player):
     # appends the length of each player's hand
     HAND_FEATURES = len(Card) + 3
 
-    def __init__(self, name, epsilon=0.1, learning_rate=0.2, discount_factor=0.8, net_dir=None, use_montecarlo_random=True):
+    def __init__(self, name, net_dir=None, epsilon=0.1, learning_rate=0.2, discount_factor=0.8,
+                  use_montecarlo_random=True, random_mc_num_explorations=30):
         super().__init__(name)
 
         self.epsilon = epsilon
         self.empty_nets = False
         self.use_montecarlo_random = use_montecarlo_random
+        self.random_mc_num_explorations = random_mc_num_explorations
         if net_dir is None:
             self.empty_nets = True
         else:
@@ -326,9 +328,9 @@ class LearningPlayer_v1(Player):
             future_reward = copy_game.get_r()
         else:
             if self.use_montecarlo_random:
-                future_reward = self.monte_carlo_random_search(game, num_explorations=10)
+                future_reward = self.monte_carlo_random_search(game, num_explorations=self.random_mc_num_explorations)
             else:
-                future_reward = self.monte_carlo_best_search(game)
+                future_reward = self.monte_carlo_best_search(game, depth=1)
 
         self.record_history_matrices.append(history_matrix)
         self.record_move_vectors.append(move_vector)
