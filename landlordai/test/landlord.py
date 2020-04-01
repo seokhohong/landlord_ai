@@ -78,7 +78,6 @@ class TestLandlordMethods(unittest.TestCase):
         game.make_bet_move(BetMove(2))
         game.make_bet_move(None)
         game.make_bet_move(BetMove(3))
-        game.reveal_kitty()
         hands = {
             TurnPosition.FIRST: [Card.ACE] * 4 + [Card.KING] * 4 + [Card.QUEEN] * 4 + [Card.JACK] * 4 + [Card.THREE],
             TurnPosition.SECOND: [Card.TEN] * 4 + [Card.NINE] * 4 + [Card.EIGHT] * 4 + [Card.SEVEN] * 4 + [Card.THREE],
@@ -129,6 +128,38 @@ class TestLandlordMethods(unittest.TestCase):
         game.force_setup(TurnPosition.THIRD, hands, 2)
         game.play_move(SpecificMove(RankedMoveType(MoveType.BOMB, Card.FIVE), Counter({Card.FIVE: 4})))
         self.assertTrue(game.bet_amount == 4)
+
+    def test_bet_1(self):
+        players = [LearningPlayer_v1('v1')] * 3
+        game = LandlordGame(players=players)
+        game.play_move(BetMove(0))
+        game.play_move(BetMove(0))
+        self.assertFalse(game.is_round_over())
+        self.assertFalse(game.is_betting_complete())
+        game.play_move(BetMove(0))
+        self.assertTrue(game.is_round_over())
+        self.assertTrue(game.is_betting_complete())
+
+    def test_bet_2(self):
+        players = [LearningPlayer_v1('v1')] * 3
+        game = LandlordGame(players=players)
+        game.play_move(BetMove(0))
+        game.play_move(BetMove(1))
+        self.assertFalse(game.is_round_over())
+        self.assertFalse(game.is_betting_complete())
+        game.play_move(BetMove(0))
+        self.assertFalse(game.is_round_over())
+        self.assertTrue(game.is_betting_complete())
+        self.assertTrue(game.get_bet_amount() == 1)
+
+    def test_bet_3(self):
+        players = [LearningPlayer_v1('v1')] * 3
+        game = LandlordGame(players=players)
+        game.play_move(BetMove(0))
+        game.play_move(BetMove(3))
+        self.assertFalse(game.is_round_over())
+        self.assertTrue(game.is_betting_complete())
+        self.assertTrue(game.get_bet_amount() == 3)
 
 if __name__ == '__main__':
     unittest.main()

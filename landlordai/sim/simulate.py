@@ -10,9 +10,10 @@ from copy import copy
 
 
 class Simulator:
-    def __init__(self, rounds, player_pool):
+    def __init__(self, rounds, player_pool, record_loser_pct=0.1):
         self.rounds = rounds
         self.player_pool = player_pool
+        self.record_everyone_pct = record_loser_pct
         self.sparse_record_states = []
         self.move_vectors = []
         self.hand_vectors = []
@@ -35,7 +36,10 @@ class Simulator:
             # play a meaningful game
             game.play_round()
             if game.has_winners():
-                for pos in game.winners:
+                players_to_record = game.winners
+                if random.random() < self.record_everyone_pct:
+                    players_to_record = list(TurnPosition)
+                for pos in players_to_record:
                     player = game.get_ai(pos)
                     self.sparse_record_states.extend([sparse.csr_matrix(x) for x in player.get_record_history_matrices()])
                     self.move_vectors.extend(player.get_record_move_vectors())

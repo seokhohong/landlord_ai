@@ -5,6 +5,7 @@ import numpy as np
 
 from landlordai.game.card import Card
 from landlordai.game.landlord import LandlordGame
+from landlordai.game.move import BetMove
 from landlordai.game.player import LearningPlayer_v1, TurnPosition
 
 
@@ -89,27 +90,51 @@ class TestLandlordMethods(unittest.TestCase):
         self.assertTrue(len(game.get_move_logs()) == 1)
 
     def test_peasant_winning(self):
-        for i in range(10):
-            players = [LearningPlayer_v1(name='random')] * 3
-            game = LandlordGame(players=players)
-            hands = {
-                TurnPosition.FIRST: [Card.ACE] * 4,
-                TurnPosition.SECOND: [Card.TEN] + [Card.THREE],
-                TurnPosition.THIRD: [Card.FIVE] * 3 + [Card.THREE] + [Card.FOUR]
-            }
-            game.betting_complete = True
-            game.force_setup(TurnPosition.THIRD, hands, 3)
-            hand_vector = players[0].get_hand_vector(game, TurnPosition.FIRST)
-            self.assertTrue(hand_vector[11] == 4)
-            self.assertTrue(hand_vector[-2] == 2)
-            self.assertTrue(hand_vector[-3] == 5)
-            self.assertTrue(hand_vector[-1] == 4)
-            #self.assertTrue(np.sum(hand_vector) == 4)
-            game.main_game()
-            self.assertTrue(TurnPosition.THIRD not in game.get_winners())
-            self.assertTrue(TurnPosition.SECOND in game.get_winners())
-            self.assertTrue(TurnPosition.FIRST in game.get_winners())
-            self.assertTrue(len(game.get_move_logs()) == 2)
+        players = [LearningPlayer_v1(name='random')] * 3
+        game = LandlordGame(players=players)
+        hands = {
+            TurnPosition.FIRST: [Card.ACE] * 4,
+            TurnPosition.SECOND: [Card.TEN] + [Card.THREE],
+            TurnPosition.THIRD: [Card.FIVE] * 3 + [Card.THREE] + [Card.FOUR]
+        }
+        game.betting_complete = True
+        game.force_setup(TurnPosition.THIRD, hands, 3)
+        hand_vector = players[0].get_hand_vector(game, TurnPosition.FIRST)
+        self.assertTrue(hand_vector[11] == 4)
+        self.assertTrue(hand_vector[-2] == 2)
+        self.assertTrue(hand_vector[-3] == 5)
+        self.assertTrue(hand_vector[-1] == 4)
+        #self.assertTrue(np.sum(hand_vector) == 4)
+        game.main_game()
+        self.assertTrue(TurnPosition.THIRD not in game.get_winners())
+        self.assertTrue(TurnPosition.SECOND in game.get_winners())
+        self.assertTrue(TurnPosition.FIRST in game.get_winners())
+        self.assertTrue(len(game.get_move_logs()) == 2)
+
+    def test_best_montecarlo(self):
+        players = [LearningPlayer_v1(name='random', use_montecarlo_random=False)] * 3
+        game = LandlordGame(players=players)
+        game.play_round(debug=False)
+
+    def test_record_features(self):
+        #def load_net(net):
+        #    return LearningPlayer_v1(name=net, net_dir='../models/' + net)
+
+        #layers = [load_net('3_31_sim4_model6') for i in range(3)]
+        players = [LearningPlayer_v1(name='random', use_montecarlo_random=False) for _ in range(3)]
+        game = LandlordGame(players=players)
+        while not game.is_round_over():
+            curr_player = game.get_current_player()
+            curr_features = curr_player.derive_features(game)
+            curr_hand_vector = game.get_current_player().get_hand_vector(game, game.get_current_position())
+            move = game.get_current_player().make_move(game, game.get_current_position())
+            curr_move_vector = game.get_current_player().compute_move_vector(game.get_current_position(),
+                                                                             game.get_landlord_position(), move)
+            game.play_move(move)
+
+            self.assertTrue(np.allclose(curr_features, curr_player.record_history_matrices[-1]))
+            self.assertTrue(np.allclose(curr_move_vector, curr_player.record_move_vectors[-1]))
+            self.assertTrue(np.allclose(curr_hand_vector, curr_player.record_hand_vectors[-1]))
 
 
 if __name__ == '__main__':

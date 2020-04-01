@@ -41,8 +41,6 @@ class LandlordGame:
         self.bet_rounds()
         if self.round_over:
             return None
-        self.set_peasants()
-        self.reveal_kitty()
         self.main_game(debug=debug)
 
     def setup(self):
@@ -77,28 +75,16 @@ class LandlordGame:
         self.kitty = kitty
 
     def reveal_kitty(self):
-        # add the kitty to the landlordai's hand
+        # add the kitty to the landlord's hand
         self.hands[self.landlord_position] += self.kitty
         self.move_logs.append((self._current_position, KittyReveal(self.kitty)))
-        self.betting_complete = True
         assert len(self.get_hand(self.landlord_position)) == LandlordGame.KITTY_SIZE + LandlordGame.DEAL_SIZE
 
     def bet_rounds(self):
         # limit number of steps to check for draw
-        for i in range(6):
+        while not self.betting_complete:
             bet = self.get_current_player().make_bet(self, self.get_current_position())
             self.make_bet_move(bet)
-            if bet is not None and bet.get_amount() == LandlordGame.MAX_BET:
-                self._current_position = self.landlord_position
-                break
-            # everyone's had a chance to bet
-            if bet is not None and bet.get_amount() > 0 and i >= LandlordGame.NUM_PLAYERS:
-                break
-
-        # if nobody bet
-        if self.bet_amount == 0:
-            self.round_over = True
-            return
 
     '''
     def step_move(self, move):
@@ -111,6 +97,23 @@ class LandlordGame:
             self.play_move(move)
     '''
 
+    def check_betting_complete(self, bet):
+        if bet is not None and bet.get_amount() == LandlordGame.MAX_BET:
+            self._current_position = self.landlord_position
+            self.betting_complete = True
+
+        if self.get_num_moves() >= LandlordGame.NUM_PLAYERS:
+            # landlord position was decided earlier
+            self.betting_complete = True
+
+            # if nobody bet
+            if self.bet_amount == 0 and self.get_num_moves():
+                self.round_over = True
+                return
+
+            # everyone's had a chance to bet
+            return
+
     def make_bet_move(self, bet):
         if bet is not None and bet.get_amount() > self.bet_amount:
             self.string_logs.append(str(self._current_position) + " bet " + str(bet))
@@ -122,6 +125,17 @@ class LandlordGame:
             self.move_logs.append((self._current_position, None))
 
         self._current_position = self._current_position.next()
+
+        self.check_betting_complete(bet)
+
+        if self.is_betting_complete() and not self.is_round_over():
+            self.reveal_kitty()
+            self.set_peasants()
+
+
+
+    def get_num_moves(self):
+        return len(self.get_move_logs())
 
     def set_peasants(self):
         for position in list(TurnPosition):
@@ -146,13 +160,13 @@ class LandlordGame:
     def get_hand(self, player: TurnPosition):
         return self.hands[player]
 
-    def get_legal_moves(self, player: TurnPosition):
+    def get_legal_moves(self):
         if self.is_betting_complete():
-            hand = CardSet(Counter(self.get_hand(player)))
+            hand = CardSet(Counter(self.get_hand(self.get_current_position())))
             all_moves = hand.get_all_moves()
 
             # you can play anything if you have control
-            if self.control_position == player:
+            if self.control_position == self.get_current_position():
                 return all_moves
 
             # otherwise you have to play moves that beat it, or pass
@@ -231,7 +245,8 @@ class LandlordGame:
         return np.argmax(self.scores) == position.index()
 
     def get_r(self):
-        if not self.is_round_over():
+        # the game never got played
+        if self.winners is None:
             return 0
 
         # landlord win is positive

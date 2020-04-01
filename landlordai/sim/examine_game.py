@@ -11,7 +11,9 @@ def load_net(net):
 
 if __name__ == "__main__":
     #players = [load_net('3_30_sim5_model8')] + [load_net('3_30_sim5_model14')] + [LearningPlayer_v1(name='random') for _ in range(1)]
-    players = [load_net('3_30_sim5_model15'), load_net('3_30_sim6_model5'), load_net('3_30_sim6_model5')]
+    #players = [LearningPlayer_v1(name='random') for _ in range(3)]
+    players = [load_net('3_31_sim4_model6'), load_net('3_31_sim4_model0'), load_net('3_31_sim4_model0')]
+
 
     while True:
         game = LandlordGame(players=players)

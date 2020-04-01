@@ -59,11 +59,12 @@ class LearningPlayer_v1(Player):
     # appends the length of each player's hand
     HAND_FEATURES = len(Card) + 3
 
-    def __init__(self, name, epsilon=0.1, learning_rate=0.2, discount_factor=0.8, net_dir=None):
+    def __init__(self, name, epsilon=0.1, learning_rate=0.2, discount_factor=0.8, net_dir=None, use_montecarlo_random=True):
         super().__init__(name)
 
         self.epsilon = epsilon
         self.empty_nets = False
+        self.use_montecarlo_random = use_montecarlo_random
         if net_dir is None:
             self.empty_nets = True
         else:
@@ -221,7 +222,7 @@ class LearningPlayer_v1(Player):
 
     def decide_best_move(self, game, player: TurnPosition, debug=False):
         assert len(game.get_hand(player)) > 0
-        legal_moves = game.get_legal_moves(player)
+        legal_moves = game.get_legal_moves()
 
         history_features = self.derive_features(game)
 
@@ -286,8 +287,37 @@ class LearningPlayer_v1(Player):
 
         return best_move
 
+
+
+    # returns a future q based on random search
+    def monte_carlo_best_search(self, game, depth=6):
+        copy_game = copy(game)
+        best_next_move_q = 0
+        for i in range(depth):
+            best_next_move, best_next_move_q = self.decide_best_move(copy_game, copy_game.get_current_position())
+            if copy_game.move_ends_game(best_next_move):
+                return copy_game.get_r()
+            else:
+                copy_game.play_move(best_next_move)
+
+        return best_next_move_q
+
+    def monte_carlo_random_search(self, game, num_explorations):
+        reward_values = []
+        for i in range(num_explorations):
+            copy_game = copy(game)
+            j = 0
+            while not copy_game.is_round_over():
+                move = random.choice(copy_game.get_legal_moves())
+                copy_game.play_move(move)
+                j += 1
+            reward_values.append(copy_game.get_r())
+        return np.mean(reward_values)
+
     def record_move(self, game, best_move, best_move_q, player: TurnPosition):
-        previous_history_matrix, move_vector = self.derive_record_features(game)
+        #previous_history_matrix, move_vector = self.derive_record_features(game)
+        history_matrix = self.derive_features(game)
+        move_vector = self.compute_move_vector(player, game.get_landlord_position(), best_move)
         hand_vector = self.get_hand_vector(game, player)
 
         copy_game = copy(game)
@@ -295,34 +325,19 @@ class LearningPlayer_v1(Player):
         if game.move_ends_game(best_move):
             future_reward = copy_game.get_r()
         else:
-            best_next_move, best_next_move_q = self.decide_best_move(copy_game, player.next())
-            if copy_game.move_ends_game(best_next_move):
-                copy_game.play_move(best_next_move)
-                future_reward = copy_game.get_r()
+            if self.use_montecarlo_random:
+                future_reward = self.monte_carlo_random_search(game, num_explorations=10)
             else:
-                future_reward = best_next_move_q
+                future_reward = self.monte_carlo_best_search(game)
 
-        self.record_history_matrices.append(previous_history_matrix)
+        self.record_history_matrices.append(history_matrix)
         self.record_move_vectors.append(move_vector)
         self.record_hand_vectors.append(hand_vector)
 
         # take old value and move by the newly learned value
         #q_update = (1 - self.learning_rate) * best_move_q + self.learning_rate * future_reward
-        '''
-        if np.abs(best_move_q - future_reward) > 1 and len(game.get_game_logs()) < 7:
-            assert False
-            print('Diff')
-            composite = keras.models.load_model('combined15.h5')
-            composite.predict(x=[np.array([self.derive_features(copy_game)]), np.array([move_vector]), np.array([hand_vector])])
-            self.decide_best_move(copy_game, player.next())
-        '''
         q_update = best_move_q + self.learning_rate * (self.discount_factor * future_reward - best_move_q)
 
-        if np.abs(q_update) > 0.3 and len(game.get_game_logs()) < 4:
-            print('Diff')
-            composite = keras.models.load_model('../models/combined15.h5')
-            composite.predict(x=[np.array([self.derive_features(copy_game)]), np.array([move_vector]), np.array([hand_vector])])
-            self.decide_best_move(copy_game, player.next())
         self._record_future_q.append(q_update)
 
     def get_record_history_matrices(self):
@@ -352,7 +367,7 @@ class RandomPlayer(Player):
             return BetMove(game.get_bet_amount() + 1)
         return None
 
-    def make_move(self, game, player: TurnPosition):
+    def make_move(self, game, player: TurnPosition, debug=False):
         hand = CardSet(Counter(game.get_hand(player)))
         all_moves = hand.get_all_moves()
         if game.get_control_position() != player:
