@@ -107,7 +107,7 @@ class LandlordGame:
             self.betting_complete = True
 
             # if nobody bet
-            if self.bet_amount == 0 and self.get_num_moves():
+            if self.bet_amount == 0:
                 self.round_over = True
                 return
 
@@ -236,9 +236,12 @@ class LandlordGame:
 
     def move_ends_game(self, move):
         player = self.get_current_position()
-        if move is not None and type(move) == SpecificMove:
-            return self.get_current_position() == player and move.cards == Counter(self.get_hand(player))
-
+        if move is not None:
+            if type(move) == SpecificMove:
+                return self.get_current_position() == player and move.cards == Counter(self.get_hand(player))
+            if type(move) == BetMove and move.get_amount() == 0 \
+                    and self.get_num_moves() >= LandlordGame.NUM_PLAYERS - 1 and self.get_bet_amount() == 0:
+                return True
         return False
 
     def player_has_won(self, position: TurnPosition):

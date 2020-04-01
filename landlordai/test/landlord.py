@@ -136,6 +136,8 @@ class TestLandlordMethods(unittest.TestCase):
         game.play_move(BetMove(0))
         self.assertFalse(game.is_round_over())
         self.assertFalse(game.is_betting_complete())
+        self.assertFalse(game.move_ends_game(BetMove(1)))
+        self.assertTrue(game.move_ends_game(BetMove(0)))
         game.play_move(BetMove(0))
         self.assertTrue(game.is_round_over())
         self.assertTrue(game.is_betting_complete())
