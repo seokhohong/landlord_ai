@@ -136,6 +136,7 @@ class TestLandlordMethods(unittest.TestCase):
             self.assertTrue(np.allclose(curr_move_vector, curr_player.record_move_vectors[-1]))
             self.assertTrue(np.allclose(curr_hand_vector, curr_player.record_hand_vectors[-1]))
 
+    # checks that the recorded q for event replay is within expected bounds
     def test_nonrandom_mc(self):
         def load_net(net):
             return LearningPlayer_v1(name=net, net_dir='../models/' + net,
@@ -164,19 +165,31 @@ class TestLandlordMethods(unittest.TestCase):
             recorded_q = curr_player._record_future_q[-1]
 
             if next_best_move_q > best_move_q:
-                if not next_best_move_q > recorded_q > best_move_q:
-                    print(next_best_move_q, recorded_q, best_move_q)
-                    curr_player.record_move(game, best_move, best_move_q, game.get_current_position())
-                    next_best_move, next_best_move_q = curr_player.decide_best_move(copy_game)
                 self.assertTrue(next_best_move_q > recorded_q > best_move_q)
             else:
-                if not next_best_move_q < recorded_q < best_move_q:
-                    print(next_best_move_q, recorded_q, best_move_q)
-                    curr_player.record_move(game, best_move, best_move_q, game.get_current_position())
-                    next_best_move, next_best_move_q = curr_player.decide_best_move(copy_game)
                 self.assertTrue(next_best_move_q < recorded_q < best_move_q)
 
             game.play_move(best_move)
+
+    def test_record_bomb_usage(self):
+        def load_net(net):
+            return LearningPlayer_v1(name=net, net_dir='../models/' + net,
+                                     use_montecarlo_random=False,
+                                     mc_best_move_depth=1,
+                                     epsilon=0,
+                                     discount_factor=1)
+
+        players = [load_net('4_1_sim3_model1') for i in range(3)]
+        game = LandlordGame(players=players)
+        hands = {
+            TurnPosition.FIRST: [Card.ACE] * 4,
+            TurnPosition.SECOND: [Card.THREE],
+            TurnPosition.THIRD: [Card.FIVE] * 3 + [Card.THREE] + [Card.FOUR]
+        }
+        game.betting_complete = True
+        game.force_setup(TurnPosition.THIRD, hands, 3)
+        game.main_game()
+        self.assertTrue(players[0].get_future_q()[0] < -4)
 
 if __name__ == '__main__':
     unittest.main()

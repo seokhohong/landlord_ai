@@ -81,6 +81,8 @@ class LearningPlayer_v1(Player):
         self.record_move_vectors = []
         self._record_future_q = []
         self.record_hand_vectors = []
+        # for debugging
+        self._record_state_q = []
 
     def load_nnets(self, net_dir):
         self.history_net = keras.models.load_model(net_dir + "/history.h5")
@@ -239,6 +241,9 @@ class LearningPlayer_v1(Player):
 
         predictions = self.get_position_predictions(history_matrix, move_options_matrix, hand_matrix)
 
+        # for debugging
+        raw_predictions = np.copy(predictions)
+
         # if the move ends the game, then force-score the position
         has_game_ending = False
         for i, move in enumerate(legal_moves):
@@ -260,8 +265,11 @@ class LearningPlayer_v1(Player):
         if debug:
             print('(' +  game.get_position_role_name(game.get_current_position()) + ') Player', self.get_name())
             print('Hand', game.get_hand(game.get_current_position()))
-            for move, pred in sorted(list(zip(legal_moves, predictions)), key=lambda x : x[1]):
-                print(pred, move)
+            for move, raw_pred, score in sorted(list(zip(legal_moves, raw_predictions, predictions)), key=lambda x : x[1]):
+                if raw_pred != score:
+                    print(raw_pred, score, move)
+                else:
+                    print(raw_pred, move)
             print('Made Move', legal_moves[best_move_index])
 
         if random.random() < self.epsilon and not has_game_ending:
@@ -270,7 +278,8 @@ class LearningPlayer_v1(Player):
                 print('Randomed', legal_moves[best_move_index])
 
         best_move = legal_moves[best_move_index]
-        best_move_q = predictions[best_move_index]
+        # return the predicted Q here, not the clamped Q
+        best_move_q = raw_predictions[best_move_index]
 
         return best_move, best_move_q
 
@@ -313,10 +322,12 @@ class LearningPlayer_v1(Player):
         hand_vector = self.get_hand_vector(game, player)
 
         copy_game = copy(game)
-        if copy_game.move_ends_game(best_move):
-            future_reward = copy_game.get_r()
+        copy_game.play_move(best_move)
+        immediate_reward = 0
+        future_reward = 0
+        if game.move_ends_game(best_move):
+            immediate_reward = copy_game.get_r()
         else:
-            copy_game.play_move(best_move)
             if self.use_montecarlo_random:
                 future_reward = self.monte_carlo_random_search(copy_game, num_explorations=self.random_mc_num_explorations)
             else:
@@ -327,9 +338,11 @@ class LearningPlayer_v1(Player):
         self.record_hand_vectors.append(hand_vector)
 
         # take old value and move by the newly learned value
-        #q_update = (1 - self.learning_rate) * best_move_q + self.learning_rate * future_reward
-        q_update = best_move_q + self.learning_rate * (self.discount_factor * future_reward - best_move_q)
+        q_update = best_move_q + self.learning_rate * (immediate_reward + self.discount_factor * future_reward - best_move_q)
+        #if abs(int(q_update) - q_update) < 1E-5:
+        #    print('Diff')
 
+        self._record_state_q.append(best_move_q)
         self._record_future_q.append(q_update)
 
     def get_record_history_matrices(self):

@@ -73,7 +73,7 @@ class CardSet:
         for kicker_1 in self._get_cards_of_count(kicker_n):
             use_a_kicker = self.remove(Counter({kicker_1: kicker_n}))
             for kicker_2 in use_a_kicker._get_cards_of_count(kicker_n):
-                if kicker_1 != kicker_2:
+                if kicker_1 != kicker_2 and sorted([kicker_1, kicker_2]) != [Card.LITTLE_JOKER, Card.BIG_JOKER]:
                     kickers.add(tuple(sorted([kicker_1, kicker_2])))
         return kickers
 

@@ -8,6 +8,8 @@ from landlordai.game.landlord import LandlordGame
 from landlordai.game.player import TurnPosition
 from copy import copy
 
+from tqdm import tqdm
+
 
 class Simulator:
     def __init__(self, rounds, player_pool, record_loser_pct=0.1):
@@ -22,7 +24,7 @@ class Simulator:
         self.result_pairs = []
 
     def play_rounds(self, debug=False):
-        for r in range(self.rounds):
+        for r in tqdm(range(self.rounds)):
             if debug:
                 print('Playing Round ', r)
             self.play_game()

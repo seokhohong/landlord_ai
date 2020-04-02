@@ -70,6 +70,10 @@ class TestLandlordMethods(unittest.TestCase):
         hand = CardSet(Counter({Card.THREE: 2, Card.FOUR: 3, Card.FIVE: 2, Card.SIX: 2}))
         self.assertTrue(len(hand._get_straights_from(Card.THREE, num_cards=2)) == 3)
 
+    def test_joker_kickers(self):
+        hand = CardSet(Counter({Card.THREE: 3, Card.FOUR: 3,
+                                Card.LITTLE_JOKER: 1, Card.BIG_JOKER: 1}))
+        self.assertTrue(len(hand.get_all_moves()) == 16)
 
 if __name__ == '__main__':
     unittest.main()

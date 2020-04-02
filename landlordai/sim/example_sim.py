@@ -18,10 +18,11 @@ if __name__ == "__main__":
     for i in range(3)]
     '''
     players = [LearningPlayer_v1('random', use_montecarlo_random=False) for i in range(1)] + \
-            [load_net('4_1_sim3_model1'), load_net('4_1_sim3_model0'), load_net('4_1_sim3_model6')]
+            [load_net('4_1_sim3_model2'), load_net('4_1_sim4_model4'), load_net('4_1_sim4_model6'),
+             load_net('4_1_sim3_model3'), load_net('4_1_sim3_model0')]
 
     for i in tqdm(range(1)):
-        simulator = Simulator(10, players)
+        simulator = Simulator(20, players)
         simulator.play_rounds()
 
         results = simulator.get_result_pairs()
