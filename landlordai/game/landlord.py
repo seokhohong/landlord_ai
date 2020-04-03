@@ -38,7 +38,7 @@ class LandlordGame:
 
     def play_round(self, debug=False):
         self.setup()
-        self.bet_rounds()
+        self.bet_rounds(debug=debug)
         if self.round_over:
             return None
         self.main_game(debug=debug)
@@ -81,10 +81,10 @@ class LandlordGame:
         self.move_logs.append((self._current_position, KittyReveal(self.kitty)))
         assert len(self.get_hand(self.landlord_position)) == LandlordGame.KITTY_SIZE + LandlordGame.DEAL_SIZE
 
-    def bet_rounds(self):
+    def bet_rounds(self, debug=False):
         # limit number of steps to check for draw
         while not self.betting_complete:
-            bet = self.get_current_player().make_move(self)
+            bet = self.get_current_player().make_move(self, debug=debug)
             self.make_bet_move(bet)
 
     '''
