@@ -6,7 +6,7 @@ import math
 
 class GameStats:
     ELO_K = 10
-    def __init__(self, player_pool, game_record):
+    def __init__(self, player_pool, game_results):
         self.player_pool = player_pool
 
         unique_player_names = set([player.get_name() for player in player_pool])
@@ -15,13 +15,15 @@ class GameStats:
         self.player_map = dict([(player, i) for (i, player) in enumerate(unique_player_names)])
 
         self.elos = [1500] * len(unique_player_names)
-        self.process_stats(game_record)
+        self.process_stats(game_results)
 
-    def process_stats(self, game_record):
-        for winner, loser in game_record:
-            self.win_matrix[self.player_map[winner], self.player_map[loser]] += 1
-            self.loss_matrix[self.player_map[loser], self.player_map[winner]] += 1
-            self.process_elo(winner, loser)
+    def process_stats(self, game_results):
+        for winners, losers in game_results:
+            for winner in winners:
+                for loser in losers:
+                    self.win_matrix[self.player_map[winner], self.player_map[loser]] += 1
+                    self.loss_matrix[self.player_map[loser], self.player_map[winner]] += 1
+            self.process_game_elo(winners, losers)
 
     @classmethod
     def elo_expected(cls, a, b):
@@ -30,6 +32,21 @@ class GameStats:
     def recenter_elo(self):
         diff = 1500 - np.mean(self.elos)
         self.elos = [elo + diff / len(self.elos) for elo in self.elos]
+
+    def process_game_elo(self, winners, losers):
+        elo_winners = np.mean([self.elos[self.player_map[winner]] for winner in winners])
+        elo_losers = np.mean([self.elos[self.player_map[loser]] for loser in losers])
+
+        winner_expected = GameStats.elo_expected(elo_winners, elo_losers)
+        loser_expected = GameStats.elo_expected(elo_losers, elo_winners)
+
+        for winner in winners:
+            self.elos[self.player_map[winner]] += GameStats.ELO_K * (1 - winner_expected)
+
+        for loser in losers:
+            self.elos[self.player_map[loser]] += GameStats.ELO_K * (0 - loser_expected)
+
+        self.recenter_elo()
 
     def process_elo(self, winner: str, loser: str):
         elo_winner = self.elos[self.player_map[winner]]

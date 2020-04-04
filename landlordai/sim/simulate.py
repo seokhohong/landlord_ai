@@ -21,7 +21,7 @@ class Simulator:
         self.hand_vectors = []
         self.q = []
 
-        self.result_pairs = []
+        self.results = []
 
     def play_rounds(self, debug=False):
         for r in tqdm(range(self.rounds)):
@@ -57,9 +57,9 @@ class Simulator:
 
     def track_stats(self, game: LandlordGame):
         assert game.is_round_over()
-        for winner in game.get_winner_ais():
-            for loser in game.get_loser_ais():
-                self.result_pairs.append((winner.get_name(), loser.get_name()))
+        winners = tuple([player.get_name() for player in game.get_winner_ais()])
+        losers = tuple([player.get_name() for player in game.get_loser_ais()])
+        self.results.append((winners, losers))
 
     def pick_players(self):
         return random.sample(self.player_pool, LandlordGame.NUM_PLAYERS)
@@ -67,5 +67,5 @@ class Simulator:
     def get_sparse_game_data(self):
         return self.sparse_record_states, np.vstack(self.move_vectors), np.vstack(self.hand_vectors), np.hstack(self.q)
 
-    def get_result_pairs(self):
-        return copy(self.result_pairs)
+    def get_results(self):
+        return copy(self.results)

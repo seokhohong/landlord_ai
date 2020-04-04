@@ -44,8 +44,14 @@ class Player:
     def make_move(self, game):
         pass
 
-class LearningPlayer_v1(Player):
+class LearningPlayer(Player):
     TIMESTEPS = 100
+
+    #estimation methods for q(s', a')
+    MONTECARLO_RANDOM = 'mcrandom'
+    BEST_SIMULATION = 'bestsim'
+    CONSENSUS_Q = 'consensusq'
+
     # 12: number of distinct cards, each feature is the number played
     # 3: one-hot encoding for landlordai player
     # 1: feature for points bet
@@ -56,12 +62,14 @@ class LearningPlayer_v1(Player):
     HAND_FEATURES = len(Card) + 3
 
     def __init__(self, name, net_dir=None, epsilon=0.1, learning_rate=0.2, discount_factor=0.8,
-                  use_montecarlo_random=True, random_mc_num_explorations=30, mc_best_move_depth=1):
+                  estimation_mode=MONTECARLO_RANDOM,
+                 random_mc_num_explorations=30,
+                 mc_best_move_depth=1):
         super().__init__(name)
 
         self.epsilon = epsilon
         self.empty_nets = False
-        self.use_montecarlo_random = use_montecarlo_random
+        self.estimation_mode = estimation_mode
         self.random_mc_num_explorations = random_mc_num_explorations
         self.mc_best_move_depth = mc_best_move_depth
         if net_dir is None:
@@ -129,10 +137,10 @@ class LearningPlayer_v1(Player):
         return np.vstack([self.compute_move_vector(player, game.get_landlord_position(), move) for player, move in game.get_game_logs()])
 
     def _append_padding(self, move_stack):
-        fluff_volume = LearningPlayer_v1.TIMESTEPS - len(move_stack)
+        fluff_volume = LearningPlayer.TIMESTEPS - len(move_stack)
 
         assert fluff_volume >= 0
-        fluff_stack = np.zeros((fluff_volume, LearningPlayer_v1.TIMESTEP_FEATURES))
+        fluff_stack = np.zeros((fluff_volume, LearningPlayer.TIMESTEP_FEATURES))
 
         if len(move_stack) == 0:
             return fluff_stack
@@ -148,7 +156,7 @@ class LearningPlayer_v1(Player):
 
     # separately returns current game state - 1 = history_matrix, and separate move vector
     def derive_record_features(self, game):
-        move_vector = np.zeros(LearningPlayer_v1.TIMESTEP_FEATURES)
+        move_vector = np.zeros(LearningPlayer.TIMESTEP_FEATURES)
         if len(game.get_game_logs()) == 1:
             last_player, last_move = game.get_game_logs()[0]
             move_vector = self.compute_move_vector(last_player, game.get_landlord_position(), last_move)
@@ -160,7 +168,7 @@ class LearningPlayer_v1(Player):
         return self._append_padding(move_stack[:-1]), move_stack[-1]
 
     def compute_move_vector(self, player: TurnPosition, landlord_position: TurnPosition, move):
-        move_vector = np.zeros(LearningPlayer_v1.TIMESTEP_FEATURES)
+        move_vector = np.zeros(LearningPlayer.TIMESTEP_FEATURES)
         other_features = {}
         if type(move) == BetMove:
             other_features = {
@@ -211,7 +219,7 @@ class LearningPlayer_v1(Player):
 
     def get_history_vector(self, features):
         if self.empty_nets:
-            return np.random.random(LearningPlayer_v1.TIMESTEP_FEATURES) * 0.01
+            return np.random.random(LearningPlayer.TIMESTEP_FEATURES) * 0.01
 
         return self.history_net.predict(np.array([features]), batch_size=1024)[0]
 
@@ -326,6 +334,20 @@ class LearningPlayer_v1(Player):
             reward_values.append(copy_game.get_r())
         return np.mean(reward_values)
 
+    def consensus_q(self, game):
+        copy_game = copy(game)
+        best_next_move_qs = []
+        # one for each player
+        for i in range(3):
+            best_next_move, best_next_move_q = self.decide_best_move(copy_game)
+            best_next_move_qs.append(best_next_move_q)
+            if copy_game.move_ends_game(best_next_move):
+                return best_next_move_q
+            else:
+                copy_game.play_move(best_next_move)
+
+        return np.mean(best_next_move_qs)
+
     def record_move(self, game, best_move, best_move_q, player: TurnPosition):
         #previous_history_matrix, move_vector = self.derive_record_features(game)
         history_matrix = self.derive_features(game)
@@ -339,10 +361,12 @@ class LearningPlayer_v1(Player):
         if game.move_ends_game(best_move):
             immediate_reward = copy_game.get_r()
         else:
-            if self.use_montecarlo_random:
+            if self.estimation_mode == LearningPlayer.MONTECARLO_RANDOM:
                 future_reward = self.monte_carlo_random_search(copy_game, num_explorations=self.random_mc_num_explorations)
-            else:
+            elif self.estimation_mode == LearningPlayer.BEST_SIMULATION:
                 future_reward = self.monte_carlo_best_search(copy_game, depth=self.mc_best_move_depth)
+            else:
+                future_reward = self.consensus_q(copy_game)
 
         self.record_history_matrices.append(history_matrix)
         self.record_move_vectors.append(move_vector)
@@ -383,5 +407,5 @@ class RandomPlayer(Player):
         return random.choice(legal_moves)
 
 class NoBetPlayer(Player):
-    def make_move(self, game):
+    def make_move(self, game, debug=False):
         return None

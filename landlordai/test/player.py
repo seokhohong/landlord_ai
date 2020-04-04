@@ -6,12 +6,12 @@ import numpy as np
 from landlordai.game.card import Card
 from landlordai.game.landlord import LandlordGame
 from landlordai.game.move import BetMove
-from landlordai.game.player import LearningPlayer_v1, TurnPosition
+from landlordai.game.player import LearningPlayer, TurnPosition
 
 
 class TestLandlordMethods(unittest.TestCase):
     def test_player_move(self):
-        players = [LearningPlayer_v1(name='random')] * 3
+        players = [LearningPlayer(name='random')] * 3
         game = LandlordGame(players=players)
         hands = {
             TurnPosition.FIRST: [Card.ACE] * 4 + [Card.KING] * 4 + [Card.QUEEN] * 4 + [Card.JACK] * 4 + [Card.THREE],
@@ -26,7 +26,7 @@ class TestLandlordMethods(unittest.TestCase):
         self.assertFalse(game2.get_hand(TurnPosition.THIRD) == game.get_hand(TurnPosition.THIRD))
 
     def test_player_game(self):
-        players = [LearningPlayer_v1(name='random')] * 3
+        players = [LearningPlayer(name='random')] * 3
         game = LandlordGame(players=players)
         hands = {
             TurnPosition.FIRST: [Card.ACE] * 4 + [Card.KING] * 4 + [Card.QUEEN] * 4 + [Card.JACK] * 4 + [Card.THREE],
@@ -51,12 +51,12 @@ class TestLandlordMethods(unittest.TestCase):
         self.assertTrue(np.sum(features[:, players[0].get_feature_index('I_AM_BEFORE_LANDLORD')]) != 0)
 
     def test_full_game(self):
-        players = [LearningPlayer_v1(name='random') for _ in range(3)]
+        players = [LearningPlayer(name='random') for _ in range(3)]
         game = LandlordGame(players=players)
         game.play_round()
 
         while np.sum(np.abs(game.get_scores())) == 0:
-            players = [LearningPlayer_v1(name='random') for _ in range(3)]
+            players = [LearningPlayer(name='random') for _ in range(3)]
             game = LandlordGame(players=players)
             game.play_round()
 
@@ -76,7 +76,7 @@ class TestLandlordMethods(unittest.TestCase):
             self.assertTrue(np.sum(features[:, players[i].get_feature_index('I_AM_BEFORE_LANDLORD')]) != 0)
 
     def test_llord_winning(self):
-        players = [LearningPlayer_v1(name='random')] * 3
+        players = [LearningPlayer(name='random')] * 3
         game = LandlordGame(players=players)
         hands = {
             TurnPosition.FIRST: [Card.ACE] * 4 + [Card.KING] * 4 + [Card.QUEEN] * 4 + [Card.JACK] * 4 + [Card.THREE],
@@ -90,7 +90,7 @@ class TestLandlordMethods(unittest.TestCase):
         self.assertTrue(len(game.get_move_logs()) == 1)
 
     def test_peasant_winning(self):
-        players = [LearningPlayer_v1(name='random')] * 3
+        players = [LearningPlayer(name='random')] * 3
         game = LandlordGame(players=players)
         hands = {
             TurnPosition.FIRST: [Card.ACE] * 4,
@@ -112,7 +112,7 @@ class TestLandlordMethods(unittest.TestCase):
         self.assertTrue(len(game.get_move_logs()) == 2)
 
     def test_best_montecarlo(self):
-        players = [LearningPlayer_v1(name='random', use_montecarlo_random=False)] * 3
+        players = [LearningPlayer(name='random', estimation_mode=LearningPlayer.MONTECARLO_RANDOM)] * 3
         game = LandlordGame(players=players)
         game.play_round(debug=False)
 
@@ -121,7 +121,7 @@ class TestLandlordMethods(unittest.TestCase):
         #    return LearningPlayer_v1(name=net, net_dir='../models/' + net)
 
         #layers = [load_net('3_31_sim4_model6') for i in range(3)]
-        players = [LearningPlayer_v1(name='random', use_montecarlo_random=False) for _ in range(3)]
+        players = [LearningPlayer(name='random', estimation_mode=LearningPlayer.MONTECARLO_RANDOM) for _ in range(3)]
         game = LandlordGame(players=players)
         while not game.is_round_over():
             curr_player = game.get_current_player()
@@ -137,15 +137,15 @@ class TestLandlordMethods(unittest.TestCase):
             self.assertTrue(np.allclose(curr_hand_vector, curr_player.record_hand_vectors[-1]))
 
     # checks that the recorded q for event replay is within expected bounds
-    def test_nonrandom_mc(self):
-        def load_net(net):
-            return LearningPlayer_v1(name=net, net_dir='../models/' + net,
-                                     use_montecarlo_random=False,
-                                     mc_best_move_depth=1,
-                                     epsilon=0,
-                                     discount_factor=1)
+    def test_estimation(self):
+        def load_best_sim_net(net):
+            return LearningPlayer(name=net, net_dir='../models/' + net,
+                                  estimation_mode=LearningPlayer.BEST_SIMULATION,
+                                  mc_best_move_depth=1,
+                                  epsilon=0,
+                                  discount_factor=1)
 
-        players = [load_net('4_1_sim3_model1') for i in range(3)]
+        players = [load_best_sim_net('4_1_sim3_model1') for i in range(3)]
 
         game = LandlordGame(players=players)
         while not game.is_round_over():

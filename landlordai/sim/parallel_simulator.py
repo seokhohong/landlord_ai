@@ -1,6 +1,6 @@
 import multiprocessing
 
-from landlordai.game.player import LearningPlayer_v1
+from landlordai.game.player import LearningPlayer
 from landlordai.sim.simulate import Simulator
 
 
@@ -15,7 +15,7 @@ def run_simulator(player_pool):
 def run_parallel():
     player_pool = []
     for i in range(10):
-        player_pool.append(LearningPlayer_v1(name='random'))
+        player_pool.append(LearningPlayer(name='random'))
 
     p = multiprocessing.Pool(2)
     print('Launch Map')
