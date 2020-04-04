@@ -171,6 +171,7 @@ class TestLandlordMethods(unittest.TestCase):
 
             game.play_move(best_move)
 
+    '''
     def test_record_bomb_usage(self):
         def load_net(net):
             return LearningPlayer_v1(name=net, net_dir='../models/' + net,
@@ -190,6 +191,7 @@ class TestLandlordMethods(unittest.TestCase):
         game.force_setup(TurnPosition.THIRD, hands, 3)
         game.main_game()
         self.assertTrue(players[0].get_future_q()[0] < -4)
+    '''
 
 if __name__ == '__main__':
     unittest.main()

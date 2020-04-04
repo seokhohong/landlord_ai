@@ -221,6 +221,17 @@ class LearningPlayer_v1(Player):
 
         return self.position_net.predict([history_matrix, move_options_matrix, hand_matrix], batch_size=1024).reshape(move_options_matrix.shape[0])
 
+    def make_bet_decision(self, game, legal_moves, predictions):
+        bet_indices = []
+        # issue with recursive import, so not using constant
+        flip_predictions = np.copy(predictions)
+        for i in range(3):
+            bet_index = legal_moves.index([move for move in legal_moves if move.get_amount() == i][0])
+            if i <= game.get_bet_amount():
+                flip_predictions[bet_index] = - flip_predictions[bet_index]
+
+        return np.argmax(flip_predictions)
+
     def decide_best_move(self, game, debug=False):
         assert len(game.get_hand(game.get_current_position())) > 0
         legal_moves = game.get_legal_moves()
@@ -260,7 +271,7 @@ class LearningPlayer_v1(Player):
             best_move_index = np.argmin(predictions)
         else:
             # go landlord if it's worth it, otherwise peasant
-            best_move_index = np.argmax(np.abs(predictions))
+            best_move_index = self.make_bet_decision(game, legal_moves, predictions)
 
         if debug:
             print('(' +  game.get_position_role_name(game.get_current_position()) + ') Player', self.get_name())
