@@ -45,7 +45,6 @@ class LandlordGame:
         self.main_game(debug=debug)
 
     def setup(self):
-        self.last_played = None
         self.landlord_position = None
         self.peasant_positions = []
         self.bet_amount = 0
@@ -87,6 +86,7 @@ class LandlordGame:
         while not self.betting_complete:
             bet = self.get_current_player().make_move(self, debug=debug)
             self.make_bet_move(bet)
+
 
     '''
     def step_move(self, move):
@@ -133,6 +133,7 @@ class LandlordGame:
         if self.is_betting_complete() and not self.is_round_over():
             self.reveal_kitty()
             self.set_peasants()
+            self._current_position = self.landlord_position
 
 
 
@@ -193,10 +194,8 @@ class LandlordGame:
             self.make_bet_move(move)
 
     def make_card_move(self, move):
-        self.move_logs.append((self._current_position, move))
         if move is not None:
-            assert (move.beats(self.last_played) or self._current_position == self.control_position)
-            self.last_played = move
+            assert (move.beats(self.get_last_played()) or self._current_position == self.control_position)
             self.string_logs.append(str(self._current_position) + " played " + str(move))
 
             self.play_from_hand(move)
@@ -206,6 +205,7 @@ class LandlordGame:
         else:
             self.string_logs.append(str(self._current_position) + " passed.")
 
+        self.move_logs.append((self._current_position, move))
         self.compute_round_over()
 
         if not self.is_round_over():
@@ -252,7 +252,7 @@ class LandlordGame:
     def player_has_won(self, position: TurnPosition):
         return np.argmax(self.scores) == position.index()
 
-    def get_position_role_name(self, position):
+    def get_position_role_name(self, position: TurnPosition):
         if not self.is_betting_complete():
             return 'UNDECIDED'
         if position == self.landlord_position:
@@ -298,7 +298,13 @@ class LandlordGame:
         return self.bet_amount
 
     def get_last_played(self):
-        return self.last_played
+        if len(self.get_move_logs()) == 0:
+            return None
+        for i in range(len(self.get_move_logs()) - 1, -1, -1):
+            if self.get_move_logs()[i][1] is not None:
+                return self.get_move_logs()[i][1]
+
+        return None
 
     def get_control_position(self):
         return self.control_position

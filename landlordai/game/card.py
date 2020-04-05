@@ -15,8 +15,8 @@ class Card(Enum):
     KING = ('KING', 'K', 10)
     ACE = ('ACE', 'A', 11)
     TWO = ('TWO', '2', 13)
-    LITTLE_JOKER = ('LITTLE_JOKER', 'jk', 14)
-    BIG_JOKER = ('BIG_JOKER', 'JK', 15)
+    LITTLE_JOKER = ('LITTLE_JOKER', 'LJ', 14)
+    BIG_JOKER = ('BIG_JOKER', 'BJ', 15)
 
     def __init__(self, name, shorthand, value):
         self.card_name = name
@@ -35,6 +35,9 @@ class Card(Enum):
     def get_name(self):
         return self.card_name
 
+    def get_shorthand(self):
+        return self.shorthand
+
     def next(self):
         return NEXT_MAP[self]
 
@@ -44,6 +47,14 @@ class Card(Enum):
     def __repr__(self):
         return self.__str__()
 
+
+def string_to_card(str_to_card):
+    for card in list(Card):
+        if card.get_name() == str_to_card:
+            return card
+        if card.get_shorthand() == str_to_card:
+            return card
+    raise ValueError
 
 NEXT_MAP = {
     Card.THREE: Card.FOUR,

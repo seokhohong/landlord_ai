@@ -1,5 +1,6 @@
 from collections import Counter
 from enum import Enum, auto
+from copy import copy
 
 from landlordai.game.card import Card
 
@@ -18,9 +19,26 @@ class BetMove:
     def __repr__(self):
         return self.__str__()
 
+    def __eq__(self, other):
+        if other is None or type(other) != BetMove:
+            return False
+        return self.amount == other.amount
+
 class KittyReveal:
-    def __init__(self, cards):
+    def __init__(self, cards: list):
         self.cards = cards
+
+    def __str__(self):
+        return "Kitty: " + ','.join([str(card) for card in self.cards])
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __eq__(self, other):
+        if other is None or type(other) != KittyReveal:
+            return False
+
+        return self.cards == other.cards
 
 class MoveType(Enum):
     SINGLE = auto(),
@@ -116,10 +134,21 @@ class SpecificMove:
     def beats(self, other):
         if other is None:
             return True
+        if type(other) == KittyReveal:
+            return True
         return self.ranked_move_type.beats(other.ranked_move_type)
 
     def is_bomb(self):
         return self.ranked_move_type.move_type == MoveType.BOMB
 
+    def get_cards(self):
+        return copy(self.cards)
+
     def __str__(self):
         return str(self.ranked_move_type) + '(' + str(self.cards) + ')'
+
+    def __eq__(self, other):
+        if other is None:
+            return False
+        return self.cards == other.cards
+

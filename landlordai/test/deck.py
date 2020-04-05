@@ -3,7 +3,7 @@ from collections import Counter
 
 from landlordai.game.card import Card
 from landlordai.game.deck import CardSet
-from landlordai.game.move import RankedMoveType, MoveType
+from landlordai.game.move import RankedMoveType, MoveType, BetMove, KittyReveal
 
 
 class TestLandlordMethods(unittest.TestCase):
@@ -74,6 +74,15 @@ class TestLandlordMethods(unittest.TestCase):
         hand = CardSet(Counter({Card.THREE: 3, Card.FOUR: 3,
                                 Card.LITTLE_JOKER: 1, Card.BIG_JOKER: 1}))
         self.assertEqual(len(hand.get_all_moves()), 17)
+
+    def test_equality(self):
+        self.assertEqual(BetMove(3), BetMove(3))
+        self.assertNotEqual(BetMove(2), BetMove(0))
+        self.assertEqual(KittyReveal(cards=[Card.FIVE, Card.SIX, Card.SEVEN]),
+                         KittyReveal(cards=[Card.FIVE, Card.SIX, Card.SEVEN]))
+        self.assertNotEqual(KittyReveal(cards=[Card.FIVE, Card.SIX, Card.SEVEN]),
+                         KittyReveal(cards=[Card.FIVE, Card.KING, Card.SEVEN]))
+        self.assertNotEqual(BetMove(3), KittyReveal(cards=[Card.FIVE, Card.SIX, Card.SEVEN]))
 
 if __name__ == '__main__':
     unittest.main()

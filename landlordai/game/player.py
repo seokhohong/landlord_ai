@@ -5,11 +5,8 @@ from enum import IntEnum
 
 import keras
 import numpy as np
-from keras.layers import *
-from keras.losses import mean_squared_error
-from keras import backend as K
 
-from landlordai.game.card import Card
+from landlordai.game.card import Card, string_to_card
 from landlordai.game.deck import CardSet
 from landlordai.game.move import KittyReveal, SpecificMove, BetMove
 
@@ -43,6 +40,9 @@ class Player:
     # returns None for pass, otherwise returns a SpecificMove
     def make_move(self, game):
         pass
+
+    def get_name(self):
+        return self.name
 
 class LearningPlayer(Player):
     TIMESTEPS = 100
@@ -240,10 +240,7 @@ class LearningPlayer(Player):
 
         return np.argmax(flip_predictions)
 
-    def decide_best_move(self, game, debug=False):
-        assert len(game.get_hand(game.get_current_position())) > 0
-        legal_moves = game.get_legal_moves()
-
+    def full_move_evaluation(self, game, legal_moves):
         history_features = self.derive_features(game)
 
         # all the moves we make from here will not affect the history, so assess it and copy
@@ -259,6 +256,15 @@ class LearningPlayer(Player):
                                                                   game.get_landlord_position(), move) for move in legal_moves])
 
         predictions = self.get_position_predictions(history_matrix, move_options_matrix, hand_matrix)
+
+        return predictions
+
+
+    def decide_best_move(self, game, debug=False):
+        assert len(game.get_hand(game.get_current_position())) > 0
+        legal_moves = game.get_legal_moves()
+
+        predictions = self.full_move_evaluation(game, legal_moves)
 
         # for debugging
         raw_predictions = np.copy(predictions)
@@ -392,9 +398,6 @@ class LearningPlayer(Player):
     def get_future_q(self):
         return self._record_future_q
 
-    def get_name(self):
-        return self.name
-
     def __str__(self):
         return self.get_name()
 
@@ -409,3 +412,110 @@ class RandomPlayer(Player):
 class NoBetPlayer(Player):
     def make_move(self, game, debug=False):
         return None
+
+
+class InvalidMoveError(Exception):
+    pass
+
+
+class TypoError(Exception):
+    pass
+
+
+class HumanPlayer(Player):
+    def __init__(self, name, reference_player=None):
+        super().__init__(name)
+        self.reference_player = reference_player
+        self.first_turn = True
+
+    def ask_ai(self, game, my_move, top_n=5):
+        legal_moves = game.get_legal_moves()
+        is_landlord = game.get_landlord_position() == game.get_current_position()
+        predictions = self.reference_player.full_move_evaluation(game, legal_moves)
+
+        sorted_moves = sorted(list(zip(legal_moves, predictions)), key=lambda x : -x[1] if is_landlord else x[1])
+
+        print("\tEvaluation By", self.reference_player.get_name())
+        if my_move == sorted_moves[0][0]:
+            print("\tBest Move!")
+
+        for i, move_tup in enumerate(sorted_moves):
+            move, pred = move_tup
+            move_marker = '<-----' if move == my_move else ''
+            if i < top_n or move == my_move:
+                print('\t', i, ": ", pred, move, move_marker)
+
+        print('\n')
+
+    @classmethod
+    def cardstrings_to_cards(cls, card_strings):
+        cards = []
+        try:
+            for card_string in card_strings:
+                card_string = card_string.strip()
+                try:
+                    card_string = card_string.upper()
+                except Exception:
+                    pass
+                cards.append(string_to_card(card_string))
+        except ValueError:
+            raise TypoError
+        return cards
+
+    @classmethod
+    def parse_input(cls, input_string, bet_phase=False):
+        if len(input_string) == 0:
+            return None
+
+        if bet_phase:
+            try:
+                bet_amount = int(input_string)
+                return BetMove(bet_amount)
+            except Exception:
+                pass
+
+        try:
+            card_strings = input_string.split(' ')
+        except Exception:
+            raise TypoError
+
+        cards = HumanPlayer.cardstrings_to_cards(card_strings)
+
+        all_possible_moves = CardSet(Counter(cards)).get_all_moves()
+        for move in all_possible_moves:
+            if move.get_cards() == Counter(cards):
+                return move
+        raise InvalidMoveError
+
+    def print_instructions(self):
+        if self.first_turn:
+            print("\nYour turn!")
+            print("Enter your cards separated by spaces. Example \"EIGHT EIGHT\".")
+            print("Enter a number to make a bet (between 0 and 3) or Return to pass.")
+            print("\n")
+            self.first_turn = False
+            self.print_instructions()
+        else:
+            print('\n')
+
+
+    def decide_best_move(self, game):
+        self.print_instructions()
+        while True:
+
+            print(game.get_hand(game.get_current_position()))
+            inp = input(">")
+            try:
+                human_move = HumanPlayer.parse_input(inp, bet_phase=not game.is_betting_complete())
+                if human_move in game.get_legal_moves():
+                    self.ask_ai(game, human_move)
+                    return human_move, 0
+                else:
+                    print('Illegal Move, please try again!')
+            except TypoError:
+                print("Invalid Input, check your spelling!")
+            except InvalidMoveError:
+                print("Not a valid Landlord Move!")
+
+
+

@@ -5,9 +5,9 @@ import numpy as np
 
 from landlordai.game.card import Card
 from landlordai.game.landlord import LandlordGame
-from landlordai.game.move import BetMove
-from landlordai.game.player import LearningPlayer, TurnPosition
-
+from landlordai.game.move import BetMove, MoveType, RankedMoveType, SpecificMove
+from landlordai.game.player import LearningPlayer, TurnPosition, HumanPlayer, TypoError, InvalidMoveError
+from collections import Counter
 
 class TestLandlordMethods(unittest.TestCase):
     def test_player_move(self):
@@ -192,6 +192,13 @@ class TestLandlordMethods(unittest.TestCase):
         game.main_game()
         self.assertTrue(players[0].get_future_q()[0] < -4)
     '''
+
+    def test_human(self):
+        human = HumanPlayer(name='human')
+        self.assertTrue(human.parse_input('nine nine nine six six'), SpecificMove(RankedMoveType(MoveType.TRIPLE_PAIR_KICKER, Card.NINE), cards=Counter({Card.NINE: 3, Card.SIX: 2})))
+        self.assertRaises(TypoError, human.parse_input, 'ni')
+        self.assertRaises(InvalidMoveError, human.parse_input, 'nine 10')
+
 
 if __name__ == '__main__':
     unittest.main()

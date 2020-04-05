@@ -16,7 +16,7 @@ class TestLandlordMethods(unittest.TestCase):
         game = LandlordGame(players=[RandomPlayer(name='random')] * 3)
         game.play_round()
         game2 = copy(game)
-        self.assertFalse(game.get_move_logs() == game2.get_move_logs())
+        self.assertTrue(game.get_move_logs() == game2.get_move_logs())
         self.assertTrue(game.get_hand(TurnPosition.SECOND) == game2.get_hand(TurnPosition.SECOND))
         self.assertTrue(game.get_last_played() == game2.get_last_played())
 
@@ -69,6 +69,7 @@ class TestLandlordMethods(unittest.TestCase):
         game.force_kitty([Card.LITTLE_JOKER, Card.BIG_JOKER, Card.THREE])
         game.make_bet_move(BetMove(2))
         game.make_bet_move(None)
+        self.assertEqual(game.get_last_played(), BetMove(2))
         game.make_bet_move(BetMove(3))
         hands = {
             TurnPosition.FIRST: [Card.ACE] * 4 + [Card.KING] * 4 + [Card.QUEEN] * 4 + [Card.JACK] * 4 + [Card.THREE],
@@ -138,6 +139,7 @@ class TestLandlordMethods(unittest.TestCase):
         players = [LearningPlayer('v1')] * 3
         game = LandlordGame(players=players)
         game.play_move(BetMove(0))
+        one_better = game.get_current_position()
         game.play_move(BetMove(1))
         self.assertFalse(game.is_round_over())
         self.assertFalse(game.is_betting_complete())
@@ -145,6 +147,7 @@ class TestLandlordMethods(unittest.TestCase):
         self.assertFalse(game.is_round_over())
         self.assertTrue(game.is_betting_complete())
         self.assertTrue(game.get_bet_amount() == 1)
+        self.assertEqual(game.get_current_position(), one_better)
 
     def test_bet_3(self):
         players = [LearningPlayer('v1')] * 3
