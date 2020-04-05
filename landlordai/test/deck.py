@@ -46,11 +46,11 @@ class TestLandlordMethods(unittest.TestCase):
         self.assertTrue(len(hand._get_straights()) == 6)
         hand = CardSet(Counter({Card.THREE: 2, Card.FOUR: 2, Card.FIVE: 3, Card.SIX: 2, Card.SEVEN: 2,
                                 Card.EIGHT: 2, Card.NINE: 2}))
-        self.assertTrue(len(hand._get_straights()) == 12)
+        self.assertTrue(len(hand._get_straights()) == 21)
 
         hand = CardSet(Counter({Card.SEVEN: 1, Card.NINE: 2, Card.TEN: 1, Card.JACK: 2, Card.QUEEN: 2,
                                 Card.KING: 2}))
-        self.assertTrue(len(hand._get_straights()) == 1)
+        self.assertTrue(len(hand._get_straights()) == 2)
         self.assertTrue(len(hand._get_straights()[0].cards) == 5)
 
     def test_quads(self):
@@ -68,12 +68,12 @@ class TestLandlordMethods(unittest.TestCase):
 
     def test_chains2(self):
         hand = CardSet(Counter({Card.THREE: 2, Card.FOUR: 3, Card.FIVE: 2, Card.SIX: 2}))
-        self.assertTrue(len(hand._get_straights_from(Card.THREE, num_cards=2)) == 3)
+        self.assertTrue(len(hand._get_straights_from(Card.THREE, num_cards=2)) == 2)
 
     def test_joker_kickers(self):
         hand = CardSet(Counter({Card.THREE: 3, Card.FOUR: 3,
                                 Card.LITTLE_JOKER: 1, Card.BIG_JOKER: 1}))
-        self.assertTrue(len(hand.get_all_moves()) == 16)
+        self.assertEqual(len(hand.get_all_moves()), 17)
 
 if __name__ == '__main__':
     unittest.main()

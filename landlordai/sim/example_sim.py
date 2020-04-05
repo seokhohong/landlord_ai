@@ -1,13 +1,17 @@
-from landlordai.game.landlord import LandlordGame
-from landlordai.game.player import LearningPlayer, RandomPlayer
+from landlordai.game.player import LearningPlayer
 from landlordai.sim.game_stats import GameStats
 from landlordai.sim.simulate import Simulator
 
-import numpy as np
+from tqdm import tqdm
 from tqdm import tqdm
 
+from landlordai.game.player import LearningPlayer
+from landlordai.sim.game_stats import GameStats
+from landlordai.sim.simulate import Simulator
+
+
 def load_net(net):
-    return LearningPlayer(name=net, net_dir='../models/' + net, use_montecarlo_random=False)
+    return LearningPlayer(name=net, net_dir='../models/' + net, estimation_mode=LearningPlayer.MONTECARLO_RANDOM)
 
 if __name__ == "__main__":
     '''
@@ -17,7 +21,7 @@ if __name__ == "__main__":
               [LearningPlayer_v1(name='3_29_sim7_model' + str(i), net_dir='../models/3_29_sim7_model' + str(i))
     for i in range(3)]
     '''
-    players = [LearningPlayer('random', use_montecarlo_random=False) for i in range(1)] + \
+    players = [LearningPlayer('random', estimation_mode=LearningPlayer.MONTECARLO_RANDOM) for i in range(1)] + \
               [load_net('4_1_sim3_model2'), load_net('4_1_sim4_model4'), load_net('4_1_sim4_model6'),
              load_net('4_1_sim3_model3'), load_net('4_1_sim3_model0')]
 

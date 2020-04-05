@@ -36,21 +36,29 @@ class Card(Enum):
         return self.card_name
 
     def next(self):
-        if self == Card.THREE: return Card.FOUR
-        if self == Card.FOUR: return Card.FIVE
-        if self == Card.FIVE: return Card.SIX
-        if self == Card.SIX: return Card.SEVEN
-        if self == Card.SEVEN: return Card.EIGHT
-        if self == Card.EIGHT: return Card.NINE
-        if self == Card.NINE: return Card.TEN
-        if self == Card.TEN: return Card.JACK
-        if self == Card.JACK: return Card.QUEEN
-        if self == Card.QUEEN: return Card.KING
-        if self == Card.KING: return Card.ACE
-        return None
+        return NEXT_MAP[self]
 
     def __str__(self):
         return self.card_name
 
     def __repr__(self):
         return self.__str__()
+
+
+NEXT_MAP = {
+    Card.THREE: Card.FOUR,
+    Card.FOUR: Card.FIVE,
+    Card.FIVE: Card.SIX,
+    Card.SIX: Card.SEVEN,
+    Card.SEVEN: Card.EIGHT,
+    Card.EIGHT: Card.NINE,
+    Card.NINE: Card.TEN,
+    Card.TEN: Card.JACK,
+    Card.JACK: Card.QUEEN,
+    Card.QUEEN: Card.KING,
+    Card.KING: Card.ACE,
+    Card.ACE: None,
+    Card.TWO: None,
+    Card.LITTLE_JOKER: None,
+    Card.BIG_JOKER: None
+}

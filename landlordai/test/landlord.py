@@ -155,6 +155,20 @@ class TestLandlordMethods(unittest.TestCase):
         self.assertTrue(game.is_betting_complete())
         self.assertTrue(game.get_bet_amount() == 3)
 
+    def test_sweep(self):
+        players = [LearningPlayer('v1')] * 3
+        game = LandlordGame(players=players)
+        hands = {
+            TurnPosition.FIRST: [Card.ACE] * LandlordGame.DEAL_SIZE,
+            TurnPosition.SECOND: [Card.TEN] * LandlordGame.DEAL_SIZE,
+            TurnPosition.THIRD: [Card.FIVE] * 4
+        }
+        game.betting_complete = True
+        game.force_setup(TurnPosition.THIRD, hands, 2)
+        game.play_move(SpecificMove(RankedMoveType(MoveType.BOMB, Card.FIVE), Counter({Card.FIVE: 4})))
+        self.assertTrue(game.peasants_have_no_plays())
+        self.assertTrue(game.get_scores()[TurnPosition.THIRD] == 2 * 2 * 2 * LandlordGame.SWEEP_MULTIPLIER)
+
 if __name__ == '__main__':
     unittest.main()
 

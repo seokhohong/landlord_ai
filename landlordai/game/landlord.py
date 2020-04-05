@@ -13,6 +13,7 @@ class LandlordGame:
     MAX_BET = 3
     NUM_PLAYERS = 3
     KITTY_SIZE = 3
+    SWEEP_MULTIPLIER = 3
     DEAL_SIZE = 17
     # games shouldn't go this long anyway
     TURN_LIMIT = 99
@@ -216,6 +217,9 @@ class LandlordGame:
         if len(self.get_hand(self._current_position)) == 0:
             #print('Over')
             self.round_over = True
+            if self.peasants_have_no_plays():
+                self.bet_amount *= LandlordGame.SWEEP_MULTIPLIER
+
             if self._current_position == self.landlord_position:
                 self.string_logs.append(str(self._current_position) + " wins as Landlord!")
                 self.winners = [self.landlord_position]
@@ -254,6 +258,14 @@ class LandlordGame:
         if position == self.landlord_position:
             return 'LANDLORD'
         return 'PEASANT'
+
+    # used for the extra landlord bonus
+    def peasants_have_no_plays(self):
+        if self.is_betting_complete():
+            if len(self.hands[self.peasant_positions[0]]) == LandlordGame.DEAL_SIZE and \
+                len(self.hands[self.peasant_positions[1]]) == LandlordGame.DEAL_SIZE:
+                return True
+        return False
 
     def get_r(self):
         # the game never got played
