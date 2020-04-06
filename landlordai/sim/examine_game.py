@@ -8,8 +8,8 @@ from tqdm import tqdm
 
 def load_net(net):
     return LearningPlayer(name=net, net_dir='../models/' + net,
-                          estimation_mode=LearningPlayer.CONSENSUS_Q,
-                          mc_best_move_depth=1,
+                          estimation_mode=LearningPlayer.BEST_SIMULATION,
+                          mc_best_move_depth=50,
                           epsilon=0,
                           learning_rate=0.2)
 
@@ -17,7 +17,7 @@ if __name__ == "__main__":
     #players = [load_net('3_30_sim5_model8')] + [load_net('3_30_sim5_model14')] + [LearningPlayer_v1(name='random') for _ in range(1)]
     #players = [LearningPlayer_v1(name='random') for _ in range(3)]
     #players = [load_net('4_1_sim1_model5'), load_net('4_1_sim1_model0')] + [LearningPlayer_v1(name='random') for _ in range(1)]
-    players = [load_net('4_4_consensus2_model4'), load_net('4_2_sim4_model10'), load_net('4_4_consensus1_model5')]
+    players = [load_net('4_4_consensus2_model4'), load_net('4_2_sim4_model10'), load_net('4_5_bestsim1_model0')]
 
 
     while True:

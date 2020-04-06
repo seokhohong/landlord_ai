@@ -9,7 +9,7 @@ from landlordai.sim.simulate import Simulator
 if __name__ == '__main__':
 
     def load_net(net):
-        return LearningPlayer(name=net, net_dir='../models/' + net, estimation_mode=LearningPlayer.CONSENSUS_Q)
+        return LearningPlayer(name=net, net_dir='../models/' + net, estimation_mode=LearningPlayer.BEST_SIMULATION, mc_best_move_depth=3)
 
     players = [LearningPlayer('random', estimation_mode=LearningPlayer.MONTECARLO_RANDOM) for i in range(1)] + \
               [load_net('4_1_sim3_model2'), load_net('4_1_sim4_model4'), load_net('4_1_sim4_model6'),

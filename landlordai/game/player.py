@@ -64,14 +64,14 @@ class LearningPlayer(Player):
     def __init__(self, name, net_dir=None, epsilon=0.1, learning_rate=0.2, discount_factor=0.8,
                   estimation_mode=MONTECARLO_RANDOM,
                  random_mc_num_explorations=30,
-                 mc_best_move_depth=1):
+                 estimation_depth=1):
         super().__init__(name)
 
         self.epsilon = epsilon
         self.empty_nets = False
         self.estimation_mode = estimation_mode
         self.random_mc_num_explorations = random_mc_num_explorations
-        self.mc_best_move_depth = mc_best_move_depth
+        self.estimation_depth = estimation_depth
         if net_dir is None:
             self.empty_nets = True
         else:
@@ -221,13 +221,14 @@ class LearningPlayer(Player):
         if self.empty_nets:
             return np.random.random(LearningPlayer.TIMESTEP_FEATURES) * 0.01
 
-        return self.history_net.predict(np.array([features]), batch_size=1024)[0]
+        return self.history_net.predict(np.array([features]), batch_size=1)[0]
 
     def get_position_predictions(self, history_matrix, move_options_matrix, hand_matrix):
         if self.empty_nets:
             return np.random.random((move_options_matrix.shape[0])) * 0.01
 
-        return self.position_net.predict([history_matrix, move_options_matrix, hand_matrix], batch_size=1024).reshape(move_options_matrix.shape[0])
+        num_rows = move_options_matrix.shape[0]
+        return self.position_net.predict([history_matrix, move_options_matrix, hand_matrix], batch_size=num_rows).reshape(num_rows)
 
     def make_bet_decision(self, game, legal_moves, predictions):
         bet_indices = []
@@ -315,8 +316,6 @@ class LearningPlayer(Player):
 
         return best_move
 
-
-
     # returns a future q based on random search
     def monte_carlo_best_search(self, game, depth=6):
         copy_game = copy(game)
@@ -325,7 +324,7 @@ class LearningPlayer(Player):
             best_next_move, best_next_move_q = self.decide_best_move(copy_game)
             if copy_game.move_ends_game(best_next_move):
                 return best_next_move_q
-            else:
+            elif i != depth - 1: # if we're not on the last move
                 copy_game.play_move(best_next_move)
 
         return best_next_move_q
@@ -340,11 +339,11 @@ class LearningPlayer(Player):
             reward_values.append(copy_game.get_r())
         return np.mean(reward_values)
 
-    def consensus_q(self, game):
+    def consensus_q(self, game, depth=3):
         copy_game = copy(game)
         best_next_move_qs = []
         # one for each player
-        for i in range(3):
+        for i in range(depth):
             best_next_move, best_next_move_q = self.decide_best_move(copy_game)
             best_next_move_qs.append(best_next_move_q)
             if copy_game.move_ends_game(best_next_move):
@@ -370,9 +369,9 @@ class LearningPlayer(Player):
             if self.estimation_mode == LearningPlayer.MONTECARLO_RANDOM:
                 future_reward = self.monte_carlo_random_search(copy_game, num_explorations=self.random_mc_num_explorations)
             elif self.estimation_mode == LearningPlayer.BEST_SIMULATION:
-                future_reward = self.monte_carlo_best_search(copy_game, depth=self.mc_best_move_depth)
+                future_reward = self.monte_carlo_best_search(copy_game, depth=self.estimation_depth)
             else:
-                future_reward = self.consensus_q(copy_game)
+                future_reward = self.consensus_q(copy_game, depth=self.estimation_depth)
 
         self.record_history_matrices.append(history_matrix)
         self.record_move_vectors.append(move_vector)
