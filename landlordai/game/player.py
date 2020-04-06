@@ -51,6 +51,7 @@ class LearningPlayer(Player):
     MONTECARLO_RANDOM = 'mcrandom'
     BEST_SIMULATION = 'bestsim'
     CONSENSUS_Q = 'consensusq'
+    NO_ESTIMATION = 'no_estimation'
 
     # 12: number of distinct cards, each feature is the number played
     # 3: one-hot encoding for landlordai player
@@ -347,13 +348,15 @@ class LearningPlayer(Player):
             best_next_move, best_next_move_q = self.decide_best_move(copy_game)
             best_next_move_qs.append(best_next_move_q)
             if copy_game.move_ends_game(best_next_move):
-                return best_next_move_q
+                break
             else:
                 copy_game.play_move(best_next_move)
 
         return np.mean(best_next_move_qs)
 
     def record_move(self, game, best_move, best_move_q, player: TurnPosition):
+        if self.estimation_mode == LearningPlayer.NO_ESTIMATION:
+            return
         #previous_history_matrix, move_vector = self.derive_record_features(game)
         history_matrix = self.derive_features(game)
         move_vector = self.compute_move_vector(player, game.get_landlord_position(), best_move)

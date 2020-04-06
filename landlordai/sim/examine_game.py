@@ -8,8 +8,8 @@ from tqdm import tqdm
 
 def load_net(net):
     return LearningPlayer(name=net, net_dir='../models/' + net,
-                          estimation_mode=LearningPlayer.BEST_SIMULATION,
-                          mc_best_move_depth=50,
+                          estimation_mode=LearningPlayer.CONSENSUS_Q,
+                          estimation_depth=7,
                           epsilon=0,
                           learning_rate=0.2)
 

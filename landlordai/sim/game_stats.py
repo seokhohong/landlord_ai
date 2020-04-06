@@ -9,12 +9,12 @@ class GameStats:
     def __init__(self, player_pool, game_results):
         self.player_pool = player_pool
 
-        unique_player_names = set([player.get_name() for player in player_pool])
-        self.win_matrix = np.zeros((len(unique_player_names), len(unique_player_names)))
-        self.loss_matrix = np.zeros((len(unique_player_names), len(unique_player_names)))
-        self.player_map = dict([(player, i) for (i, player) in enumerate(unique_player_names)])
+        self.unique_player_names = set([player.get_name() for player in player_pool])
+        self.win_matrix = np.zeros((len(self.unique_player_names), len(self.unique_player_names)))
+        self.loss_matrix = np.zeros((len(self.unique_player_names), len(self.unique_player_names)))
+        self.player_map = dict([(player, i) for (i, player) in enumerate(self.unique_player_names)])
 
-        self.elos = [1500] * len(unique_player_names)
+        self.elos = [1500] * len(self.unique_player_names)
         self.process_stats(game_results)
 
     def process_stats(self, game_results):
@@ -70,3 +70,9 @@ class GameStats:
 
         total_games = wins + losses
         return wins / total_games
+
+    def print_player_stats(self):
+        print('Player Stats:\n')
+        sorted_stats = sorted([(self.get_elo(name), self.get_win_rate(name), name) for name in self.unique_player_names], key=lambda x: -x[0])
+        for elo, win_rate, name in sorted_stats:
+            print(elo, win_rate, name)
