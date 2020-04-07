@@ -28,7 +28,7 @@ if __name__ == "__main__":
 
     print('\n')
     for i in range(3):
-        print(np.array(players[i].get_future_q(), dtype=np.float16))
+        print(np.array(players[i].get_estimated_q(), dtype=np.float16))
         print(np.array(players[i]._record_state_q, dtype=np.float16))
         print('\n')
 

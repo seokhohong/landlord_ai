@@ -47,7 +47,7 @@ class Simulator:
                     self.sparse_record_states.extend([sparse.csr_matrix(x) for x in player.get_record_history_matrices()])
                     self.move_vectors.extend(player.get_record_move_vectors())
                     self.hand_vectors.extend(player.get_record_hand_vectors())
-                    self.q.append(player.get_future_q())
+                    self.q.append(player.get_estimated_q())
                     player.reset_records()
                 self.track_stats(game)
                 break

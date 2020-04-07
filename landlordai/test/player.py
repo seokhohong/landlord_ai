@@ -196,10 +196,17 @@ class TestLandlordMethods(unittest.TestCase):
         for player in players:
             player.compute_future_q()
 
-        for i, score in enumerate(player_0_scores):
-            if i > 0:
-                self.assertEqual(score, players[0].get_future_q()[i - 1])
-        self.assertEqual(len(players[0].get_record_hand_vectors()), len(players[0].get_future_q()))
+        record_state = players[0]._record_state_q
+        future_q = players[0].get_estimated_q()
+        # assert in bounds based on update function
+        for i, val in enumerate(record_state):
+            if i != len(record_state) - 1:
+                if record_state[i + 1] < record_state[i]:
+                    self.assertTrue(record_state[i + 1] < future_q[i] < record_state[i])
+                elif record_state[i + 1] > record_state[i]:
+                    self.assertTrue(record_state[i + 1] > future_q[i] > record_state[i])
+
+        self.assertEqual(len(players[0].get_record_hand_vectors()), len(players[0].get_estimated_q()))
     '''
     def test_record_bomb_usage(self):
         def load_net(net):

@@ -377,7 +377,11 @@ class LearningPlayer(Player):
         self.record_move_vectors = self.record_move_vectors[:-1]
         self.record_hand_vectors = self.record_hand_vectors[:-1]
         # shift forward
-        self._record_future_q = self._record_state_q[1:]
+        self._record_future_q = []
+        for i, experienced_q in enumerate(self._record_state_q[1:]):
+            old_q = self._record_state_q[i]
+            update_q = old_q + self.learning_rate * (self.discount_factor * experienced_q - old_q)
+            self._record_future_q.append(update_q)
 
         self._recording_finalized = True
 
@@ -424,7 +428,7 @@ class LearningPlayer(Player):
     def get_record_hand_vectors(self):
         return self.record_hand_vectors
 
-    def get_future_q(self):
+    def get_estimated_q(self):
         assert self._recording_finalized is True
         return self._record_future_q
 
