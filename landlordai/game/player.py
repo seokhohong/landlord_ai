@@ -370,12 +370,10 @@ class LearningPlayer(Player):
 
         self._record_state_q.append(best_move_q)
 
-    def compute_future_q(self):
+    def compute_future_q(self, game):
         assert self._recording_finalized is False
 
-        self.record_history_matrices = self.record_history_matrices[:-1]
-        self.record_move_vectors = self.record_move_vectors[:-1]
-        self.record_hand_vectors = self.record_hand_vectors[:-1]
+        self._record_state_q.append(game.get_r())
         # shift forward
         self._record_future_q = []
         for i, experienced_q in enumerate(self._record_state_q[1:]):

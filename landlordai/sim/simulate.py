@@ -43,7 +43,7 @@ class Simulator:
                     players_to_record = list(TurnPosition)
                 for pos in players_to_record:
                     player = game.get_ai(pos)
-                    player.compute_future_q()
+                    player.compute_future_q(game)
                     self.sparse_record_states.extend([sparse.csr_matrix(x) for x in player.get_record_history_matrices()])
                     self.move_vectors.extend(player.get_record_move_vectors())
                     self.hand_vectors.extend(player.get_record_hand_vectors())

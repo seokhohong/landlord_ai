@@ -194,7 +194,7 @@ class TestLandlordMethods(unittest.TestCase):
             game.play_move(best_move)
 
         for player in players:
-            player.compute_future_q()
+            player.compute_future_q(game)
 
         record_state = players[0]._record_state_q
         future_q = players[0].get_estimated_q()
