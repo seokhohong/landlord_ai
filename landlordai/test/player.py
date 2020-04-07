@@ -137,11 +137,12 @@ class TestLandlordMethods(unittest.TestCase):
             self.assertTrue(np.allclose(curr_hand_vector, curr_player.record_hand_vectors[-1]))
 
     # checks that the recorded q for event replay is within expected bounds
+    '''
     def test_estimation(self):
         def load_best_sim_net(net):
             return LearningPlayer(name=net, net_dir='../models/' + net,
                                   estimation_mode=LearningPlayer.BEST_SIMULATION,
-                                  mc_best_move_depth=1,
+                                  estimation_depth=4,
                                   epsilon=0,
                                   discount_factor=1)
 
@@ -170,7 +171,35 @@ class TestLandlordMethods(unittest.TestCase):
                 self.assertTrue(next_best_move_q < recorded_q < best_move_q)
 
             game.play_move(best_move)
+    '''
+    def test_record_actual_q(self):
+        def load_best_sim_net(net):
+            return LearningPlayer(name=net, net_dir='../models/' + net,
+                                  estimation_mode=LearningPlayer.ACTUAL_Q,
+                                  epsilon=0,
+                                  discount_factor=1)
 
+        players = [load_best_sim_net('4_2_sim4_model10') for i in range(3)]
+        player_0_scores = []
+        game = LandlordGame(players=players)
+        while not game.is_round_over():
+            curr_player = game.get_current_player()
+
+            best_move, best_move_q = curr_player.decide_best_move(game)
+            if curr_player == players[0]:
+                player_0_scores.append(best_move_q)
+
+            curr_player.make_move(game)
+
+            game.play_move(best_move)
+
+        for player in players:
+            player.compute_future_q()
+
+        for i, score in enumerate(player_0_scores):
+            if i > 0:
+                self.assertEqual(score, players[0].get_future_q()[i - 1])
+        self.assertEqual(len(players[0].get_record_hand_vectors()), len(players[0].get_future_q()))
     '''
     def test_record_bomb_usage(self):
         def load_net(net):

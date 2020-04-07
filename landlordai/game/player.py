@@ -52,6 +52,7 @@ class LearningPlayer(Player):
     BEST_SIMULATION = 'bestsim'
     CONSENSUS_Q = 'consensusq'
     NO_ESTIMATION = 'no_estimation'
+    ACTUAL_Q = 'actualq'
 
     # 12: number of distinct cards, each feature is the number played
     # 3: one-hot encoding for landlordai player
@@ -92,6 +93,7 @@ class LearningPlayer(Player):
         self.record_hand_vectors = []
         # for debugging
         self._record_state_q = []
+        self._recording_finalized = False
 
     def load_nnets(self, net_dir):
         self.history_net = keras.models.load_model(net_dir + "/history.h5")
@@ -313,7 +315,10 @@ class LearningPlayer(Player):
     def make_move(self, game, debug=False):
         best_move, best_move_q = self.decide_best_move(game, debug=debug)
 
-        self.record_move(game, best_move, best_move_q, game.get_current_position())
+        if self.estimation_mode == LearningPlayer.ACTUAL_Q:
+            self.record_move(game, best_move, best_move_q, game.get_current_position())
+        else:
+            self.record_move_old(game, best_move, best_move_q, game.get_current_position())
 
         return best_move
 
@@ -355,6 +360,28 @@ class LearningPlayer(Player):
         return np.mean(best_next_move_qs)
 
     def record_move(self, game, best_move, best_move_q, player: TurnPosition):
+        history_matrix = self.derive_features(game)
+        move_vector = self.compute_move_vector(player, game.get_landlord_position(), best_move)
+        hand_vector = self.get_hand_vector(game, player)
+
+        self.record_history_matrices.append(history_matrix)
+        self.record_move_vectors.append(move_vector)
+        self.record_hand_vectors.append(hand_vector)
+
+        self._record_state_q.append(best_move_q)
+
+    def compute_future_q(self):
+        assert self._recording_finalized is False
+
+        self.record_history_matrices = self.record_history_matrices[:-1]
+        self.record_move_vectors = self.record_move_vectors[:-1]
+        self.record_hand_vectors = self.record_hand_vectors[:-1]
+        # shift forward
+        self._record_future_q = self._record_state_q[1:]
+
+        self._recording_finalized = True
+
+    def record_move_old(self, game, best_move, best_move_q, player: TurnPosition):
         if self.estimation_mode == LearningPlayer.NO_ESTIMATION:
             return
         #previous_history_matrix, move_vector = self.derive_record_features(game)
@@ -398,6 +425,7 @@ class LearningPlayer(Player):
         return self.record_hand_vectors
 
     def get_future_q(self):
+        assert self._recording_finalized is True
         return self._record_future_q
 
     def __str__(self):
@@ -506,7 +534,7 @@ class HumanPlayer(Player):
         while True:
 
             print(game.get_hand(game.get_current_position()))
-            inp = input(">")
+            inp = input(">").strip()
             try:
                 human_move = HumanPlayer.parse_input(inp, bet_phase=not game.is_betting_complete())
                 if human_move in game.get_legal_moves():
