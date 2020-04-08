@@ -21,12 +21,11 @@ class TestLandlordMethods(unittest.TestCase):
         game.betting_complete = True
         game.force_setup(TurnPosition.THIRD, hands, 3)
         game2 = copy(game)
-        best_move = players[0].make_move(game, game.get_current_position())
-        game.play_move(best_move)
-        self.assertFalse(game2.get_hand(TurnPosition.THIRD) == game.get_hand(TurnPosition.THIRD))
+        game.play_move(SpecificMove(RankedMoveType(MoveType.BOMB, Card.FIVE), Counter({Card.FIVE: 4})))
+        self.assertNotEqual(game2.get_hand(TurnPosition.THIRD), game.get_hand(TurnPosition.THIRD))
 
     def test_player_game(self):
-        players = [LearningPlayer(name='random')] * 3
+        players = [LearningPlayer(name='random', estimation_mode=LearningPlayer.ACTUAL_Q)] * 3
         game = LandlordGame(players=players)
         hands = {
             TurnPosition.FIRST: [Card.ACE] * 4 + [Card.KING] * 4 + [Card.QUEEN] * 4 + [Card.JACK] * 4 + [Card.THREE],
@@ -36,14 +35,10 @@ class TestLandlordMethods(unittest.TestCase):
         game.betting_complete = True
         game.force_setup(TurnPosition.THIRD, hands, 3)
         game.main_game()
+        players[0].compute_future_q(game)
         self.assertTrue(np.sum(np.abs(game.get_scores())) > 0)
         # game is over
         self.assertTrue(np.abs(players[0]._record_future_q[-1]) > 0.5)
-
-        self.assertTrue(np.allclose(players[0].derive_features(game)[:len(game.get_move_logs()) - 1],
-                                    players[0].derive_record_features(game)[0][:len(game.get_move_logs()) - 1]))
-        self.assertTrue(np.allclose(players[0].derive_features(game)[len(game.get_move_logs()) - 1],
-                                    players[0].derive_record_features(game)[1]))
 
         features = players[0].derive_features(game)
         self.assertTrue(np.sum(features[:, players[0].get_feature_index('I_AM_LANDLORD')]) != 0)
@@ -64,11 +59,6 @@ class TestLandlordMethods(unittest.TestCase):
         for i in range(3):
             #print(players[i].record_future_q[-1])
             #self.assertTrue(np.abs(players[i].record_future_q[-1]) > 0.5)
-
-            self.assertTrue(np.allclose(players[i].derive_features(game)[:len(game.get_move_logs()) - 1],
-                                        players[i].derive_record_features(game)[0][:len(game.get_move_logs()) - 1]))
-            self.assertTrue(np.allclose(players[i].derive_features(game)[len(game.get_move_logs()) - 1],
-                                        players[i].derive_record_features(game)[1]))
 
             features = players[i].derive_features(game)
             self.assertTrue(np.sum(features[:, players[i].get_feature_index('I_AM_LANDLORD')]) != 0)
@@ -116,25 +106,37 @@ class TestLandlordMethods(unittest.TestCase):
         game = LandlordGame(players=players)
         game.play_round(debug=False)
 
-    def test_record_features(self):
-        #def load_net(net):
-        #    return LearningPlayer_v1(name=net, net_dir='../models/' + net)
-
-        #layers = [load_net('3_31_sim4_model6') for i in range(3)]
-        players = [LearningPlayer(name='random', estimation_mode=LearningPlayer.MONTECARLO_RANDOM) for _ in range(3)]
+    def test_features(self):
+        players = [LearningPlayer(name='random', estimation_mode=LearningPlayer.ACTUAL_Q) for _ in range(3)]
         game = LandlordGame(players=players)
         while not game.is_round_over():
             curr_player = game.get_current_player()
-            curr_features = curr_player.derive_features(game)
+            curr_features = curr_player.derive_features_bridge(game, game.get_current_position())
             curr_hand_vector = game.get_current_player().get_hand_vector(game, game.get_current_position())
             move = game.get_current_player().make_move(game, game.get_current_position())
             curr_move_vector = game.get_current_player().compute_move_vector(game.get_current_position(),
                                                                              game.get_landlord_position(), move)
+
             game.play_move(move)
 
             self.assertTrue(np.allclose(curr_features, curr_player.record_history_matrices[-1]))
             self.assertTrue(np.allclose(curr_move_vector, curr_player.record_move_vectors[-1]))
             self.assertTrue(np.allclose(curr_hand_vector, curr_player.record_hand_vectors[-1]))
+
+    def test_features_bridge(self):
+        players = [LearningPlayer(name='random', estimation_mode=LearningPlayer.MONTECARLO_RANDOM) for _ in range(3)]
+        game = LandlordGame(players=players)
+
+        while not game.is_round_over():
+            curr_player = game.get_current_player()
+            curr_features = curr_player.derive_features_bridge(game, game.get_current_position())
+            curr_hand_vector = game.get_current_player().get_hand_vector(game, game.get_current_position())
+
+            move = game.get_current_player().make_move(game, game.get_current_position())
+
+            game.play_move(move)
+
+            self.assertTrue(np.allclose(curr_features[0][:LearningPlayer.HAND_FEATURES], curr_hand_vector))
 
     # checks that the recorded q for event replay is within expected bounds
     '''

@@ -133,7 +133,7 @@ class CardSet:
                 for kicker1, kicker2 in hand_without_core._get_two_kickers(kicker_n=2):
                     specific_cards = airplane_cards + Counter({kicker1: 2, kicker2: 2})
                     moves.append(
-                        SpecificMove(RankedMoveType(MoveType.AIRPLANE_SINGLE_KICKER, card.next()), specific_cards))
+                        SpecificMove(RankedMoveType(MoveType.AIRPLANE_PAIR_KICKER, card.next()), specific_cards))
         return moves
 
     def _get_special_moves(self):
