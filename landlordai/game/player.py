@@ -49,9 +49,6 @@ class LearningPlayer(Player):
     TIMESTEPS = 100
 
     #estimation methods for q(s', a')
-    MONTECARLO_RANDOM = 'mcrandom'
-    BEST_SIMULATION = 'bestsim'
-    CONSENSUS_Q = 'consensusq'
     NO_ESTIMATION = 'no_estimation'
     ACTUAL_Q = 'actualq'
 
@@ -65,7 +62,7 @@ class LearningPlayer(Player):
     HAND_FEATURES = len(Card) + 3
 
     def __init__(self, name, net_dir=None, epsilon=0.1, learning_rate=0.2, discount_factor=0.8,
-                  estimation_mode=MONTECARLO_RANDOM,
+                  estimation_mode=ACTUAL_Q,
                  random_mc_num_explorations=30,
                  estimation_depth=1):
         super().__init__(name)
@@ -148,7 +145,8 @@ class LearningPlayer(Player):
 
     def _derive_move_stack_bridge(self, game, player):
         # pad to achieve timestep length
-        feature_stack = [np.concatenate([self.get_hand_vector(game, player), np.zeros(LearningPlayer.TIMESTEP_FEATURES - LearningPlayer.HAND_FEATURES)])]
+        feature_stack = [np.concatenate([self.get_hand_vector(game, player),
+                                         np.zeros(LearningPlayer.TIMESTEP_FEATURES - LearningPlayer.HAND_FEATURES)])]
         move_stack = [self.compute_move_vector(player, game.get_landlord_position(), move) for player, move in game.get_game_logs()]
         feature_stack.extend(move_stack)
         return np.vstack(feature_stack)
@@ -193,9 +191,6 @@ class LearningPlayer(Player):
         if type(move) == SpecificMove:
             for card, count in move.cards.items():
                 move_vector[self.get_feature_index(card.name)] = count
-            # print(1 if game.current_player_is_landlord() else 0)
-            # print(1 if game.get_current_position().next() == game.get_landlord_position() else 0)
-            # print(1 if game.get_current_position().previous() == game.get_landlord_position() else 0)
             other_features = {'I_AM_LANDLORD': 1 if player == landlord_position else 0,
                               'I_AM_BEFORE_LANDLORD': 1 if player.previous() == landlord_position else 0,
                               'I_AM_AFTER_LANDLORD': 1 if player.next() == landlord_position else 0}
@@ -319,45 +314,8 @@ class LearningPlayer(Player):
 
         return best_move
 
-    # returns a future q based on random search
-    def monte_carlo_best_search(self, game, depth=6):
-        copy_game = copy(game)
-        best_next_move_q = 0
-        for i in range(depth):
-            best_next_move, best_next_move_q = self.decide_best_move(copy_game)
-            if copy_game.move_ends_game(best_next_move):
-                return best_next_move_q
-            elif i != depth - 1: # if we're not on the last move
-                copy_game.play_move(best_next_move)
-
-        return best_next_move_q
-
-    def monte_carlo_random_search(self, game, num_explorations):
-        reward_values = []
-        for i in range(num_explorations):
-            copy_game = copy(game)
-            while not copy_game.is_round_over():
-                move = random.choice(copy_game.get_legal_moves())
-                copy_game.play_move(move)
-            reward_values.append(copy_game.get_r())
-        return np.mean(reward_values)
-
-    def consensus_q(self, game, depth=3):
-        copy_game = copy(game)
-        best_next_move_qs = []
-        # one for each player
-        for i in range(depth):
-            best_next_move, best_next_move_q = self.decide_best_move(copy_game)
-            best_next_move_qs.append(best_next_move_q)
-            if copy_game.move_ends_game(best_next_move):
-                break
-            else:
-                copy_game.play_move(best_next_move)
-
-        return np.mean(best_next_move_qs)
-
     def record_move(self, game, best_move, best_move_q, player: TurnPosition):
-        history_matrix = self.derive_features_bridge(game, player)
+        history_matrix = self.derive_features(game, player)
         move_vector = self.compute_move_vector(player, game.get_landlord_position(), best_move)
         hand_vector = self.get_hand_vector(game, player)
 
@@ -389,7 +347,7 @@ class LearningPlayer(Player):
     def get_record_hand_vectors(self):
         return self.record_hand_vectors
 
-    def get_estimated_q(self):
+    def get_estimated_qs(self):
         assert self._recording_finalized is True
         return self._record_future_q
 
@@ -399,6 +357,30 @@ class LearningPlayer(Player):
     def __repr__(self):
         return self.__str__()
 
+
+class LearningPlayer_v2(LearningPlayer):
+    def _derive_feature_stack(self, game, player):
+        # pad to achieve timestep length
+        feature_stack = [np.concatenate([self.get_hand_vector(game, player),
+                                         np.zeros(LearningPlayer.TIMESTEP_FEATURES - LearningPlayer.HAND_FEATURES)])]
+        move_stack = [self.compute_move_vector(player, game.get_landlord_position(), move) for player, move in game.get_game_logs()]
+        feature_stack.extend(move_stack)
+        return np.vstack(feature_stack)
+
+    def derive_features(self, game):
+        return self._append_padding(self._derive_feature_stack(game, game.get_current_position()))
+
+    def record_move(self, game, best_move, best_move_q, player: TurnPosition):
+        history_matrix = self.derive_features(game)
+
+        move_vector = self.compute_move_vector(player, game.get_landlord_position(), best_move)
+        hand_vector = self.get_hand_vector(game, player)
+
+        self.record_history_matrices.append(history_matrix)
+        self.record_move_vectors.append(move_vector)
+        self.record_hand_vectors.append(hand_vector)
+
+        self._record_state_q.append(best_move_q)
 
 
 class RandomPlayer(Player):
