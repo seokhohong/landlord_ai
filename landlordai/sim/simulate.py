@@ -12,9 +12,11 @@ from tqdm import tqdm
 
 
 class Simulator:
-    def __init__(self, rounds, player_pool, record_loser_pct=0.1):
+    # competitors are not used for feature extraction
+    def __init__(self, rounds, player_pool, competitor_pool, record_loser_pct=0.1):
         self.rounds = rounds
-        self.player_pool = player_pool
+        self.player_pool = player_pool + competitor_pool
+        self.competitor_pool = competitor_pool
         self.record_everyone_pct = record_loser_pct
         self.sparse_record_states = []
         self.move_vectors = []
@@ -31,6 +33,17 @@ class Simulator:
         if debug:
             print('Done Playing')
 
+    def record_player(self, game, player):
+        # don't record any competitors
+        if player in self.competitor_pool:
+            return
+        player.compute_future_q(game)
+        self.sparse_record_states.extend([sparse.csr_matrix(x) for x in player.get_record_history_matrices()])
+        self.move_vectors.extend(player.get_record_move_vectors())
+        self.hand_vectors.extend(player.get_record_hand_vectors())
+        self.q.append(player.get_estimated_qs())
+        player.reset_records()
+
     def play_game(self):
         while True:
             players = self.pick_players()
@@ -41,14 +54,9 @@ class Simulator:
                 players_to_record = game.winners
                 if random.random() < self.record_everyone_pct:
                     players_to_record = list(TurnPosition)
-                for pos in players_to_record:
-                    player = game.get_ai(pos)
-                    player.compute_future_q(game)
-                    self.sparse_record_states.extend([sparse.csr_matrix(x) for x in player.get_record_history_matrices()])
-                    self.move_vectors.extend(player.get_record_move_vectors())
-                    self.hand_vectors.extend(player.get_record_hand_vectors())
-                    self.q.append(player.get_estimated_qs())
-                    player.reset_records()
+                    for pos in players_to_record:
+                        player = game.get_ai(pos)
+                        self.record_player(game, player)
                 self.track_stats(game)
                 break
 
@@ -66,7 +74,12 @@ class Simulator:
         return random.sample(self.player_pool, LandlordGame.NUM_PLAYERS)
 
     def get_sparse_game_data(self):
+        if len(self.sparse_record_states) == 0:
+            raise NoRecordsException
         return self.sparse_record_states, np.vstack(self.move_vectors), np.vstack(self.hand_vectors), np.hstack(self.q)
 
     def get_results(self):
         return copy(self.results)
+
+class NoRecordsException(Exception):
+    pass

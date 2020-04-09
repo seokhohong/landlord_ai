@@ -315,7 +315,7 @@ class LearningPlayer(Player):
         return best_move
 
     def record_move(self, game, best_move, best_move_q, player: TurnPosition):
-        history_matrix = self.derive_features(game, player)
+        history_matrix = self.derive_features(game)
         move_vector = self.compute_move_vector(player, game.get_landlord_position(), best_move)
         hand_vector = self.get_hand_vector(game, player)
 

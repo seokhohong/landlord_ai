@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(name='landlord_ai',
-      version='0.1.29',
+      version='0.1.31',
       description='Landlord AI Core',
       license='GNU',
       packages=['landlordai.game', 'landlordai.sim'],

@@ -115,7 +115,7 @@ class TestLandlordMethods(unittest.TestCase):
         game = LandlordGame(players=players)
         while not game.is_round_over():
             curr_player = game.get_current_player()
-            curr_features = curr_player.derive_features_bridge(game, game.get_current_position())
+            curr_features = curr_player.derive_features(game)
             curr_hand_vector = game.get_current_player().get_hand_vector(game, game.get_current_position())
             move = game.get_current_player().make_move(game, game.get_current_position())
             curr_move_vector = game.get_current_player().compute_move_vector(game.get_current_position(),
