@@ -13,7 +13,9 @@ from tqdm import tqdm
 
 class Simulator:
     # competitors are not used for feature extraction
-    def __init__(self, rounds, player_pool, competitor_pool, record_loser_pct=0.1):
+    def __init__(self, rounds, player_pool, competitor_pool=None, record_loser_pct=0.1):
+        if competitor_pool is None:
+            competitor_pool = []
         self.rounds = rounds
         self.player_pool = player_pool + competitor_pool
         self.competitor_pool = competitor_pool
@@ -37,6 +39,7 @@ class Simulator:
         # don't record any competitors
         if player in self.competitor_pool:
             return
+
         player.compute_future_q(game)
         self.sparse_record_states.extend([sparse.csr_matrix(x) for x in player.get_record_history_matrices()])
         self.move_vectors.extend(player.get_record_move_vectors())
@@ -54,9 +57,9 @@ class Simulator:
                 players_to_record = game.winners
                 if random.random() < self.record_everyone_pct:
                     players_to_record = list(TurnPosition)
-                    for pos in players_to_record:
-                        player = game.get_ai(pos)
-                        self.record_player(game, player)
+                for pos in players_to_record:
+                    player = game.get_ai(pos)
+                    self.record_player(game, player)
                 self.track_stats(game)
                 break
 

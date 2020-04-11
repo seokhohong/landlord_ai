@@ -145,7 +145,7 @@ class SpecificMove:
         return copy(self.cards)
 
     def __str__(self):
-        return str(self.ranked_move_type) + '(' + str(self.cards) + ')'
+        return str(self.ranked_move_type) + '(' + str(dict(self.cards)) + ')'
 
     def __eq__(self, other):
         if other is None:

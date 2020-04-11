@@ -23,9 +23,9 @@ def load_v2_net(net):
                           learning_rate=0.3)
 
 if __name__ == "__main__":
-    players = [load_net('4_9_actualq1_model30'),
-               load_net('4_2_sim4_model14'),
-               load_net('4_7_actualq5_model20')]
+    players = [load_net('4_10_actualq1_model4'),
+               load_net('4_10_actualq1_model34'),
+               load_net('4_10_actualq1_model14')]
 
     while True:
         game = LandlordGame(players=players)
