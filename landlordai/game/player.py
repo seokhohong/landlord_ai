@@ -402,17 +402,19 @@ class TypoError(Exception):
 
 
 class HumanPlayer(Player):
-    def __init__(self, name, reference_player=None):
+    def __init__(self, name, reference_player=None, known_hand=False, ai_before=False):
         super().__init__(name)
         self.reference_player = reference_player
         self.first_turn = True
+        self.known_hand = known_hand
+        self.ai_before = ai_before
 
     def ask_ai(self, game, my_move, top_n=5):
         legal_moves = game.get_legal_moves()
         is_landlord = game.get_landlord_position() == game.get_current_position()
         predictions = self.reference_player.full_move_evaluation(game, legal_moves)
 
-        sorted_moves = sorted(list(zip(legal_moves, predictions)), key=lambda x : -x[1] if is_landlord else x[1])
+        sorted_moves = sorted(list(zip(legal_moves, predictions)), key=lambda x: -x[1] if is_landlord else x[1])
 
         print("\tEvaluation By", self.reference_player.get_name())
         if my_move == sorted_moves[0][0]:
@@ -442,10 +444,19 @@ class HumanPlayer(Player):
         return cards
 
     @classmethod
-    def parse_input(cls, input_string, bet_phase=False):
+    def parse_input_for_cardset(cls, input_string):
         if len(input_string) == 0:
             return None
 
+        try:
+            card_strings = input_string.split(' ')
+        except Exception:
+            raise TypoError
+
+        return HumanPlayer.cardstrings_to_cards(card_strings)
+
+    @classmethod
+    def parse_input(cls, input_string, bet_phase=False):
         if bet_phase:
             try:
                 bet_amount = int(input_string)
@@ -453,12 +464,9 @@ class HumanPlayer(Player):
             except Exception:
                 pass
 
-        try:
-            card_strings = input_string.split(' ')
-        except Exception:
-            raise TypoError
-
-        cards = HumanPlayer.cardstrings_to_cards(card_strings)
+        cards = HumanPlayer.parse_input_for_cardset(input_string)
+        if cards is None:
+            return None
 
         all_possible_moves = CardSet(Counter(cards)).get_all_moves()
         for move in all_possible_moves:
@@ -468,7 +476,7 @@ class HumanPlayer(Player):
 
     def print_instructions(self):
         if self.first_turn:
-            print("\nYour turn!")
+            print("\n")
             print("Enter your cards separated by spaces. Example \"EIGHT EIGHT\".")
             print("Enter a number to make a bet (between 0 and 3) or Return to pass.")
             print("\n")
@@ -482,12 +490,22 @@ class HumanPlayer(Player):
         self.print_instructions()
         while True:
 
-            print(game.get_hand(game.get_current_position()))
+            print(self.get_name() + "'s turn!")
+            if self.known_hand:
+                print(game.get_hand(game.get_current_position()))
+
+            # ai assistance
+            if self.ai_before and self.known_hand:
+                print("Asking AI", self.ai_before, self.known_hand)
+                self.ask_ai(game, my_move=None)
+
+            # get input
             inp = input(">").strip()
             try:
                 human_move = HumanPlayer.parse_input(inp, bet_phase=not game.is_betting_complete())
-                if human_move in game.get_legal_moves():
-                    self.ask_ai(game, human_move)
+                if human_move in game.get_legal_moves() or self.known_hand is False:
+                    if not self.ai_before and self.known_hand:
+                        self.ask_ai(game, human_move)
                     return human_move, 0
                 else:
                     print('Illegal Move, please try again!')

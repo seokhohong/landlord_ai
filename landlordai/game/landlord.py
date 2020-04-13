@@ -4,6 +4,7 @@ from copy import copy
 
 import numpy as np
 
+from landlordai.game.card import Card
 from landlordai.game.deck import LandlordDeck, CardSet
 from landlordai.game.move import SpecificMove, BetMove, KittyReveal
 from landlordai.game.player import TurnPosition
@@ -17,7 +18,8 @@ class LandlordGame:
     DEAL_SIZE = 17
     # games shouldn't go this long anyway
     TURN_LIMIT = 99
-    def __init__(self, players):
+    # kitty_callback should return a list of 3 cards; used if we want manual setting of cards
+    def __init__(self, players, kitty_callback=None):
         self.players = players
         self.scores = [0] * 3
         self.string_logs = []
@@ -25,6 +27,7 @@ class LandlordGame:
         assert(len(self.players) == LandlordGame.NUM_PLAYERS)
         self.setup()
         self.betting_complete = False
+        self.kitty_callback = kitty_callback
 
     def __copy__(self):
         cls = self.__class__
@@ -74,7 +77,15 @@ class LandlordGame:
     def force_kitty(self, kitty):
         self.kitty = kitty
 
+    def force_hand(self, position: TurnPosition, hand):
+        self.hands[position] = hand
+
     def reveal_kitty(self):
+        if self.kitty_callback is not None:
+            self.kitty = self.kitty_callback()
+            assert type(self.kitty) == list
+            assert len(self.kitty) == 3
+            assert type(self.kitty[0]) == Card
         # add the kitty to the landlord's hand
         self.hands[self.landlord_position] += self.kitty
         self.hands[self.landlord_position] = sorted(self.hands[self.landlord_position])
@@ -180,25 +191,29 @@ class LandlordGame:
     def get_game_logs(self):
         return self.move_logs
 
-    def play_from_hand(self, move: SpecificMove):
+    def play_from_hand(self, move: SpecificMove, hand_known=True):
         hand = self.get_hand(self._current_position)
         for card, count in move.cards.items():
             for i in range(count):
-                hand.remove(card)
+                if hand_known:
+                    hand.remove(card)
+                else:
+                    # if we don't know the hand, then just remove one card from it
+                    hand = hand[1:]
 
     # main play_move, triages depending on move
-    def play_move(self, move):
+    def play_move(self, move, hand_known=True):
         if self.is_betting_complete():
-            self.make_card_move(move)
+            self.make_card_move(move, hand_known)
         else:
             self.make_bet_move(move)
 
-    def make_card_move(self, move):
+    def make_card_move(self, move, hand_known=True):
         if move is not None:
             assert (move.beats(self.get_last_played()) or self._current_position == self.control_position)
             self.string_logs.append(str(self._current_position) + " played " + str(move))
 
-            self.play_from_hand(move)
+            self.play_from_hand(move, hand_known=hand_known)
             if move.is_bomb():
                 self.bet_amount = self.bet_amount * 2
             self.control_position = self._current_position

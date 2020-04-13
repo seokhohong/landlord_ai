@@ -2,12 +2,11 @@ from landlordai.game.landlord import LandlordGame
 from landlordai.game.move import KittyReveal
 from landlordai.game.player import LearningPlayer, TurnPosition, HumanPlayer
 
-ref_net = '4_10_actualq1_model19'
+ref_net = '4_11_actualq1_model20'
 reference_player = LearningPlayer(name=ref_net, net_dir='../models/' + ref_net, estimation_mode=LearningPlayer.ACTUAL_Q)
 
 def load_net(net):
     return LearningPlayer(name=net, net_dir='../models/' + net, estimation_mode=LearningPlayer.ACTUAL_Q)
-
 
 def play_against_two(players):
     game = LandlordGame(players)
@@ -29,5 +28,5 @@ def play_against_two(players):
             print('WINNERS:', game.get_ai_players()[winner].get_name())
 
 if __name__ == "__main__":
-    play_against_two([load_net('4_10_actualq1_model19'), load_net('4_10_actualq1_model19'),
-                      HumanPlayer(name='human', reference_player=reference_player)])
+    play_against_two([load_net('4_11_actualq1_model20'), load_net('4_11_actualq1_model20'),
+                      HumanPlayer(name='human', reference_player=reference_player, known_hand=True, ai_before=False)])
