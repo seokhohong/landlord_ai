@@ -1,7 +1,8 @@
 landlordai/models/*
-*.DS_store
+*.DS_Store
 *.h5
 *.pkl
+*.npz
 dist/*
 *.zip
 spark/lai/*
