@@ -20,7 +20,7 @@ class Simulator:
         self.player_pool = player_pool + competitor_pool
         self.competitor_pool = competitor_pool
         self.record_everyone_pct = record_loser_pct
-        self.sparse_record_states = []
+        self.record_states = []
         self.move_vectors = []
         self.hand_vectors = []
         self.q = []
@@ -41,7 +41,7 @@ class Simulator:
             return
 
         player.compute_future_q(game)
-        self.sparse_record_states.extend([sparse.csr_matrix(x) for x in player.get_record_history_matrices()])
+        self.record_states.extend(player.get_record_history_matrices())
         self.move_vectors.extend(player.get_record_move_vectors())
         self.hand_vectors.extend(player.get_record_hand_vectors())
         self.q.append(player.get_estimated_qs())
@@ -76,13 +76,14 @@ class Simulator:
     def pick_players(self):
         return random.sample(self.player_pool, LandlordGame.NUM_PLAYERS)
 
-    def get_sparse_game_data(self):
-        if len(self.sparse_record_states) == 0:
+    def get_game_data(self):
+        if len(self.record_states) == 0:
             raise NoRecordsException
-        return self.sparse_record_states, np.vstack(self.move_vectors), np.vstack(self.hand_vectors), np.hstack(self.q)
+        return self.record_states, np.vstack(self.move_vectors), np.vstack(self.hand_vectors), np.hstack(self.q)
 
     def get_results(self):
         return copy(self.results)
+
 
 class NoRecordsException(Exception):
     pass

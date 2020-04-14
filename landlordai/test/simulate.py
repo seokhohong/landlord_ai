@@ -14,7 +14,7 @@ class TestLandlordMethods(unittest.TestCase):
         simulator = Simulator(2, players)
         simulator.play_rounds()
 
-        history_matrices, move_vectors, hand_vectors, qs = simulator.get_sparse_game_data()
+        history_matrices, move_vectors, hand_vectors, qs = simulator.get_game_data()
         self.assertTrue(len(hand_vectors) == len(move_vectors))
         self.assertTrue(history_matrices[0].shape[0] == LearningPlayer.TIMESTEPS)
         self.assertTrue(len(history_matrices) == qs.shape[0])
@@ -25,7 +25,7 @@ class TestLandlordMethods(unittest.TestCase):
         competitors = [LearningPlayer(name='random', estimation_mode=LearningPlayer.ACTUAL_Q) for _ in range(2)]
         simulator = Simulator(2, players, competitors)
         simulator.play_rounds()
-        self.assertRaises(NoRecordsException, simulator.get_sparse_game_data)
+        self.assertRaises(NoRecordsException, simulator.get_game_data)
 
 
 if __name__ == '__main__':
