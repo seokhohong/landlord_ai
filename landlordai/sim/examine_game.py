@@ -6,10 +6,9 @@ from landlordai.sim.simulate import Simulator
 import numpy as np
 from tqdm import tqdm
 
-def load_net(net):
-    return LearningPlayer(name=net, net_dir='../models/' + net,
+def load_net(net, models_dir='../models/'):
+    return LearningPlayer(name=net, net_dir=models_dir + net,
                           estimation_mode=LearningPlayer.ACTUAL_Q,
-                          estimation_depth=7,
                           discount_factor=1,
                           epsilon=0,
                           learning_rate=0.3)
@@ -23,9 +22,15 @@ def load_v2_net(net):
                           learning_rate=0.3)
 
 if __name__ == "__main__":
-    players = [load_net('4_11_actualq4_model20'),
-               load_net('4_11_actualq4_model20'),
-               load_net('4_11_actualq4_model20')]
+    #players = [load_net('4_11_actualq4_model20'),
+    #           load_net('4_11_actualq4_model20'),
+    #           load_net('4_11_actualq4_model20')]
+
+    players = [
+        load_net('4_13_stream1_model1_55', '../stream_models/'),
+        load_net('4_13_stream1_model1_54', '../stream_models/'),
+        load_net('4_13_stream1_model1_53', '../stream_models/')
+    ]
 
     while True:
         game = LandlordGame(players=players)

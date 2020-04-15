@@ -319,7 +319,7 @@ class LearningPlayer(Player):
         move_vector = self.compute_move_vector(player, game.get_landlord_position(), best_move)
         hand_vector = self.get_hand_vector(game, player)
 
-        self.record_history_matrices.append(history_matrix)
+        self.record_history_matrices.append(history_matrix.astype(dtype=np.int8))
         self.record_move_vectors.append(move_vector)
         self.record_hand_vectors.append(hand_vector)
 

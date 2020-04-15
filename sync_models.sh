@@ -1,1 +1,1 @@
-gsutil -m cp -r gs://landlord_ai/models landlordai/
+gsutil -m cp -r gs://hseokho-lai/stream_models landlordai/
