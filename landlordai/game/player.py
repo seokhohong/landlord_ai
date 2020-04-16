@@ -163,7 +163,7 @@ class LearningPlayer(Player):
         return np.vstack([move_stack, fluff_stack])
 
     def derive_features(self, game):
-        return self._append_padding(self._derive_move_stack(game))
+        return self._append_padding(self._derive_move_stack(game)).astype(np.int8)
 
     def derive_features_bridge(self, game, player: TurnPosition):
         return self._append_padding(self._derive_move_stack_bridge(game, player))
@@ -365,17 +365,6 @@ class LearningPlayer_v2(LearningPlayer):
 
     def get_game_result(self, game):
         return game.get_winbased_r()
-
-    def _derive_feature_stack(self, game, player):
-        # pad to achieve timestep length
-        feature_stack = [np.concatenate([self.get_hand_vector(game, player),
-                                         np.zeros(LearningPlayer.TIMESTEP_FEATURES - LearningPlayer.HAND_FEATURES)])]
-        move_stack = [self.compute_move_vector(player, game.get_landlord_position(), move) for player, move in game.get_game_logs()]
-        feature_stack.extend(move_stack)
-        return np.vstack(feature_stack)
-
-    def derive_features(self, game):
-        return self._append_padding(self._derive_feature_stack(game, game.get_current_position())).astype(np.int8)
 
     def record_move(self, game, best_move, best_move_q, player: TurnPosition):
         history_matrix = self.derive_features(game)
