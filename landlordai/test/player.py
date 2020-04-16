@@ -142,22 +142,46 @@ class TestLandlordMethods(unittest.TestCase):
 
             self.assertTrue(np.allclose(curr_features[0][:LearningPlayer.HAND_FEATURES], curr_hand_vector))
 
-    def test_features_v2(self):
+    def test_hand_vector_v2(self):
         players = [LearningPlayer_v2(name='random', estimation_mode=LearningPlayer.ACTUAL_Q) for _ in range(3)]
+        game = LandlordGame(players=players)
+        hands = {
+            TurnPosition.FIRST: [Card.ACE] * 4,
+            TurnPosition.SECOND: [Card.TEN] + [Card.THREE],
+            TurnPosition.THIRD: [Card.FIVE] * 3 + [Card.THREE] + [Card.FOUR]
+        }
+        game.betting_complete = True
+        game.force_setup(TurnPosition.SECOND, hands, 3)
+        best_move = SpecificMove(RankedMoveType(MoveType.TRIPLE_SINGLE_KICKER, Card.TEN),
+                                     cards=Counter({Card.TEN: 3, Card.THREE: 1}))
+        move_vector = players[1].compute_move_vector(TurnPosition.SECOND, game.get_landlord_position(), best_move)
+        remaining_hand_vector = players[1].compute_remaining_hand_vector(game, move_vector, TurnPosition.SECOND)
+
+        self.assertEqual(np.sum(remaining_hand_vector), 0)
+
+    def test_features_v2(self):
+        players = [LearningPlayer_v2(name='random', epsilon=0, estimation_mode=LearningPlayer.ACTUAL_Q, learning_rate=1) for _ in range(3)]
         game = LandlordGame(players=players)
         while not game.is_round_over():
             curr_player = game.get_current_player()
             curr_features = curr_player.derive_features(game)
-            curr_hand_vector = game.get_current_player().get_hand_vector(game, game.get_current_position())
-            move = game.get_current_player().make_move(game, game.get_current_position())
-            curr_move_vector = game.get_current_player().compute_move_vector(game.get_current_position(),
-                                                                             game.get_landlord_position(), move)
 
-            game.play_move(move)
+            best_move, best_move_q = curr_player.decide_best_move(game)
+            curr_move_vector = game.get_current_player().compute_move_vector(game.get_current_position(),
+                                                                             game.get_landlord_position(), best_move)
+            curr_hand_vector = game.get_current_player().compute_remaining_hand_vector(game, curr_move_vector, game.get_current_position())
+
+            curr_player.record_move(game, best_move, best_move_q, game.get_current_position())
+            game.play_move(best_move)
 
             self.assertTrue(np.allclose(curr_features, curr_player.record_history_matrices[-1]))
             self.assertTrue(np.allclose(curr_move_vector, curr_player.record_move_vectors[-1]))
             self.assertTrue(np.allclose(curr_hand_vector, curr_player.record_hand_vectors[-1]))
+
+        players[0].compute_future_q(game)
+
+        self.assertTrue(np.max(np.abs(players[0].get_estimated_qs())) == 1)
+        self.assertTrue(players[0].record_history_matrices[0][0].dtype == np.int8)
 
     def load_v2_net(self, net):
         return LearningPlayer_v2(name=net, net_dir='../models/' + net,
@@ -189,11 +213,11 @@ class TestLandlordMethods(unittest.TestCase):
 
                 history_vectors.append(players[0].history_net.predict(np.array([history_features]), batch_size=1)[0])
 
-                all_hand_vectors.append(players[0].get_hand_vector(game, game.get_current_position()))
-
                 # create features for each of the possible moves from this position
                 all_move_vectors.append(players[0].compute_move_vector(game.get_current_position(),
                                                                           game.get_landlord_position(), best_move))
+
+                all_hand_vectors.append(players[0].compute_remaining_hand_vector(game, all_move_vectors[-1], game.get_current_position()))
 
                 predicted_q = players[0].position_net.predict([np.array([history_vectors[-1]]), np.array([all_move_vectors[-1]]), np.array([all_hand_vectors[-1]])])[0][0]
 

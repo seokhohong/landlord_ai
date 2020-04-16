@@ -294,6 +294,19 @@ class LandlordGame:
         # peasant win is negative
         return - self.bet_amount
 
+    # -1 to 1, -1 is peasant win
+    def get_winbased_r(self):
+        # the game never got played
+        if self.winners is None:
+            return 0
+
+        # landlord win is positive
+        if self.landlord_position in self.winners:
+            return 1
+
+        # peasant win is negative
+        return -1
+
     def get_scores(self):
         return copy(self.scores)
 

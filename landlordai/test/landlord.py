@@ -171,6 +171,8 @@ class TestLandlordMethods(unittest.TestCase):
         game.play_move(SpecificMove(RankedMoveType(MoveType.BOMB, Card.FIVE), Counter({Card.FIVE: 4})))
         self.assertTrue(game.peasants_have_no_plays())
         self.assertTrue(game.get_scores()[TurnPosition.THIRD] == 2 * 2 * 2 * LandlordGame.SWEEP_MULTIPLIER)
+        self.assertEqual(game.get_r(), 24)
+        self.assertEqual(game.get_winbased_r(), 1)
 
 if __name__ == '__main__':
     unittest.main()
