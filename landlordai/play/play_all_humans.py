@@ -1,12 +1,9 @@
 from landlordai.game.landlord import LandlordGame
 from landlordai.game.move import KittyReveal
-from landlordai.game.player import LearningPlayer, TurnPosition, HumanPlayer
+from landlordai.game.player import TurnPosition, HumanPlayer, LearningPlayer_v2, LearningPlayer
 
-ref_net = '4_10_actualq1_model19'
-reference_player = LearningPlayer(name=ref_net, net_dir='../models/' + ref_net, estimation_mode=LearningPlayer.ACTUAL_Q)
-
-def load_net(net):
-    return LearningPlayer(name=net, net_dir='../models/' + net, estimation_mode=LearningPlayer.ACTUAL_Q)
+ref_net = '4_13_stream2_model2_134'
+reference_player = LearningPlayer_v2(name=ref_net, net_dir='../stream_models/' + ref_net, estimation_mode=LearningPlayer.ACTUAL_Q)
 
 def parse_cardlist(statement):
     print(statement)

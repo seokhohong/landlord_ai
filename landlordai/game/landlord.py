@@ -20,56 +20,55 @@ class LandlordGame:
     TURN_LIMIT = 99
     # kitty_callback should return a list of 3 cards; used if we want manual setting of cards
     def __init__(self, players, kitty_callback=None):
-        self.players = players
-        self.scores = [0] * 3
+        self._players = players
+        self._scores = [0] * 3
         self.string_logs = []
-        self.move_logs = []
-        assert(len(self.players) == LandlordGame.NUM_PLAYERS)
-        self.setup()
-        self.betting_complete = False
-        self.kitty_callback = kitty_callback
+        self._move_logs = []
+        assert(len(self._players) == LandlordGame.NUM_PLAYERS)
+        self._setup()
+        self._betting_complete = False
+        self._kitty_callback = kitty_callback
 
     def __copy__(self):
         cls = self.__class__
         result = cls.__new__(cls)
         result.__dict__.update(self.__dict__)
-        result.move_logs = [(copy(elem[0]), copy(elem[1])) for elem in self.move_logs]
+        result._move_logs = [(copy(elem[0]), copy(elem[1])) for elem in self._move_logs]
         result.string_logs = copy(self.string_logs)
-        result.scores = copy(self.scores)
-        result.peasant_positions = copy(self.peasant_positions)
-        result.hands = dict((k, copy(v)) for (k, v) in self.hands.items())
+        result._scores = copy(self._scores)
+        result._peasant_positions = copy(self._peasant_positions)
+        result._hands = dict((k, copy(v)) for (k, v) in self._hands.items())
         return result
 
     def play_round(self, debug=False):
-        self.setup()
-        self.bet_rounds(debug=debug)
-        if self.round_over:
+        self._setup()
+        self._bet_rounds(debug=debug)
+        if self._round_over:
             return None
         self.main_game(debug=debug)
 
-    def setup(self):
-        self.landlord_position = None
-        self.peasant_positions = []
-        self.bet_amount = 0
-        self.starting_position = random.choice(list(TurnPosition))
-        self._current_position = self.starting_position
-        self.control_position = None
-        self.round_over = False
+    def _setup(self):
+        self._landlord_position = None
+        self._peasant_positions = []
+        self._bet_amount = 0
+        self._current_position = random.choice(list(TurnPosition))
+        self._control_position = None
+        self._round_over = False
         # list of winners
-        self.winners = None
+        self._winners = None
         deck = LandlordDeck()
         self.kitty = deck.draw(LandlordGame.KITTY_SIZE)
-        self.hands = {TurnPosition.FIRST: deck.draw(LandlordGame.DEAL_SIZE),
-                      TurnPosition.SECOND: deck.draw(LandlordGame.DEAL_SIZE),
-                      TurnPosition.THIRD: deck.draw(LandlordGame.DEAL_SIZE)}
+        self._hands = {TurnPosition.FIRST: deck.draw(LandlordGame.DEAL_SIZE),
+                       TurnPosition.SECOND: deck.draw(LandlordGame.DEAL_SIZE),
+                       TurnPosition.THIRD: deck.draw(LandlordGame.DEAL_SIZE)}
 
 
     def force_setup(self, landlord_position: TurnPosition, hands: dict, bet_amount: int):
-        self.landlord_position = landlord_position
-        self._current_position = self.landlord_position
-        self.hands = hands
-        self.bet_amount = bet_amount
-        self.set_peasants()
+        self._landlord_position = landlord_position
+        self._current_position = self._landlord_position
+        self._hands = hands
+        self._bet_amount = bet_amount
+        self._set_peasants()
 
     def force_current_position(self, current_position):
         self._current_position = current_position
@@ -78,25 +77,25 @@ class LandlordGame:
         self.kitty = kitty
 
     def force_hand(self, position: TurnPosition, hand):
-        self.hands[position] = hand
+        self._hands[position] = hand
 
-    def reveal_kitty(self):
-        if self.kitty_callback is not None:
-            self.kitty = self.kitty_callback()
+    def _reveal_kitty(self):
+        if self._kitty_callback is not None:
+            self.kitty = self._kitty_callback()
             assert type(self.kitty) == list
             assert len(self.kitty) == 3
             assert type(self.kitty[0]) == Card
         # add the kitty to the landlord's hand
-        self.hands[self.landlord_position] += self.kitty
-        self.hands[self.landlord_position] = sorted(self.hands[self.landlord_position])
-        self.move_logs.append((self._current_position, KittyReveal(self.kitty)))
-        assert len(self.get_hand(self.landlord_position)) == LandlordGame.KITTY_SIZE + LandlordGame.DEAL_SIZE
+        self._hands[self._landlord_position] += self.kitty
+        self._hands[self._landlord_position] = sorted(self._hands[self._landlord_position])
+        self._move_logs.append((self._current_position, KittyReveal(self.kitty)))
+        assert len(self.get_hand(self._landlord_position)) == LandlordGame.KITTY_SIZE + LandlordGame.DEAL_SIZE
 
-    def bet_rounds(self, debug=False):
+    def _bet_rounds(self, debug=False):
         # limit number of steps to check for draw
-        while not self.betting_complete:
+        while not self._betting_complete:
             bet = self.get_current_player().make_move(self, debug=debug)
-            self.make_bet_move(bet)
+            self._make_bet_move(bet)
 
 
     '''
@@ -110,69 +109,69 @@ class LandlordGame:
             self.play_move(move)
     '''
 
-    def check_betting_complete(self, bet):
+    def _check_betting_complete(self, bet):
         if bet is not None and bet.get_amount() == LandlordGame.MAX_BET:
-            self._current_position = self.landlord_position
-            self.betting_complete = True
+            self._current_position = self._landlord_position
+            self._betting_complete = True
 
         if self.get_num_moves() >= LandlordGame.NUM_PLAYERS:
             # landlord position was decided earlier
-            self.betting_complete = True
+            self._betting_complete = True
 
             # if nobody bet
-            if self.bet_amount == 0:
-                self.round_over = True
+            if self._bet_amount == 0:
+                self._round_over = True
                 return
 
             # everyone's had a chance to bet
             return
 
-    def make_bet_move(self, bet):
-        if bet is not None and bet.get_amount() > self.bet_amount:
+    def _make_bet_move(self, bet):
+        if bet is not None and bet.get_amount() > self._bet_amount:
             self.string_logs.append(str(self._current_position) + " bet " + str(bet))
-            self.move_logs.append((self._current_position, bet))
-            self.bet_amount = bet.get_amount()
-            self.landlord_position = self._current_position
+            self._move_logs.append((self._current_position, bet))
+            self._bet_amount = bet.get_amount()
+            self._landlord_position = self._current_position
         else:
             self.string_logs.append(str(self._current_position) + " passed")
-            self.move_logs.append((self._current_position, None))
+            self._move_logs.append((self._current_position, None))
 
         self._current_position = self._current_position.next()
 
-        self.check_betting_complete(bet)
+        self._check_betting_complete(bet)
 
         if self.is_betting_complete() and not self.is_round_over():
-            self.reveal_kitty()
-            self.set_peasants()
-            self._current_position = self.landlord_position
+            self._reveal_kitty()
+            self._set_peasants()
+            self._current_position = self._landlord_position
 
 
 
     def get_num_moves(self):
         return len(self.get_move_logs())
 
-    def set_peasants(self):
+    def _set_peasants(self):
         for position in list(TurnPosition):
-            if position != self.landlord_position:
-                self.peasant_positions.append(position)
+            if position != self._landlord_position:
+                self._peasant_positions.append(position)
 
     def is_betting_complete(self):
-        return self.betting_complete
+        return self._betting_complete
 
     def get_current_player(self):
-        return self.players[self._current_position]
+        return self._players[self._current_position]
 
-    def current_player_is_landlord(self):
-        return self._current_position == self.landlord_position
+    def is_current_player_landlord(self):
+        return self._current_position == self._landlord_position
 
     def get_current_position(self):
         return self._current_position
 
     def get_landlord_position(self):
-        return self.landlord_position
+        return self._landlord_position
 
     def get_hand(self, player: TurnPosition):
-        return self.hands[player]
+        return self._hands[player]
 
     def get_legal_moves(self):
         if self.is_betting_complete():
@@ -180,16 +179,16 @@ class LandlordGame:
             all_moves = hand.get_all_moves()
 
             # you can play anything if you have control
-            if self.control_position == self.get_current_position():
+            if self._control_position == self.get_current_position():
                 return all_moves
 
             # otherwise you have to play moves that beat it, or pass
             return [move for move in all_moves if move.beats(self.get_last_played())] + [None]
         else:
-            return [BetMove(0), BetMove(1), BetMove(2), BetMove(3)]
+            return [BetMove(x) for x in range(LandlordGame.MAX_BET + 1)]
 
     def get_game_logs(self):
-        return self.move_logs
+        return self._move_logs
 
     def play_from_hand(self, move: SpecificMove, hand_known=True):
         hand = self.get_hand(self._current_position)
@@ -204,23 +203,23 @@ class LandlordGame:
     # main play_move, triages depending on move
     def play_move(self, move, hand_known=True):
         if self.is_betting_complete():
-            self.make_card_move(move, hand_known)
+            self._make_card_move(move, hand_known)
         else:
-            self.make_bet_move(move)
+            self._make_bet_move(move)
 
-    def make_card_move(self, move, hand_known=True):
+    def _make_card_move(self, move, hand_known=True):
         if move is not None:
-            assert (move.beats(self.get_last_played()) or self._current_position == self.control_position)
+            assert (move.beats(self.get_last_played()) or self._current_position == self._control_position)
             self.string_logs.append(str(self._current_position) + " played " + str(move))
 
             self.play_from_hand(move, hand_known=hand_known)
             if move.is_bomb():
-                self.bet_amount = self.bet_amount * 2
-            self.control_position = self._current_position
+                self._bet_amount = self._bet_amount * 2
+            self._control_position = self._current_position
         else:
             self.string_logs.append(str(self._current_position) + " passed.")
 
-        self.move_logs.append((self._current_position, move))
+        self._move_logs.append((self._current_position, move))
         self.compute_round_over()
 
         if not self.is_round_over():
@@ -231,26 +230,26 @@ class LandlordGame:
         #print('cards', len(self.get_hand(self.current_position)))
         if len(self.get_hand(self._current_position)) == 0:
             #print('Over')
-            self.round_over = True
+            self._round_over = True
             if self.peasants_have_no_plays():
-                self.bet_amount *= LandlordGame.SWEEP_MULTIPLIER
+                self._bet_amount *= LandlordGame.SWEEP_MULTIPLIER
 
-            if self._current_position == self.landlord_position:
+            if self._current_position == self._landlord_position:
                 self.string_logs.append(str(self._current_position) + " wins as Landlord!")
-                self.winners = [self.landlord_position]
+                self._winners = [self._landlord_position]
                 # landlordai gains
-                self.scores[self._current_position] += self.bet_amount * 2
-                self.scores[self.peasant_positions[0]] -= self.bet_amount
-                self.scores[self.peasant_positions[1]] -= self.bet_amount
+                self._scores[self._current_position] += self._bet_amount * 2
+                self._scores[self._peasant_positions[0]] -= self._bet_amount
+                self._scores[self._peasant_positions[1]] -= self._bet_amount
             else:
-                self.string_logs.append(str(self.peasant_positions) + " win as Peasants!")
-                self.winners = self.peasant_positions
+                self.string_logs.append(str(self._peasant_positions) + " win as Peasants!")
+                self._winners = self._peasant_positions
                 # peasants gain
-                self.scores[self._current_position] -= self.bet_amount * 2
-                self.scores[self.peasant_positions[0]] += self.bet_amount
-                self.scores[self.peasant_positions[1]] += self.bet_amount
-            self.string_logs.append(str(self.scores))
-            assert (sum(self.scores) == 0)
+                self._scores[self._current_position] -= self._bet_amount * 2
+                self._scores[self._peasant_positions[0]] += self._bet_amount
+                self._scores[self._peasant_positions[1]] += self._bet_amount
+            self.string_logs.append(str(self._scores))
+            assert (sum(self._scores) == 0)
             return True
         return False
 
@@ -265,54 +264,54 @@ class LandlordGame:
         return False
 
     def player_has_won(self, position: TurnPosition):
-        return np.argmax(self.scores) == position.index()
+        return np.argmax(self._scores) == position.index()
 
     def get_position_role_name(self, position: TurnPosition):
         if not self.is_betting_complete():
             return 'UNDECIDED'
-        if position == self.landlord_position:
+        if position == self._landlord_position:
             return 'LANDLORD'
         return 'PEASANT'
 
     # used for the extra landlord bonus
     def peasants_have_no_plays(self):
         if self.is_betting_complete():
-            if len(self.hands[self.peasant_positions[0]]) == LandlordGame.DEAL_SIZE and \
-                len(self.hands[self.peasant_positions[1]]) == LandlordGame.DEAL_SIZE:
+            if len(self._hands[self._peasant_positions[0]]) == LandlordGame.DEAL_SIZE and \
+                len(self._hands[self._peasant_positions[1]]) == LandlordGame.DEAL_SIZE:
                 return True
         return False
 
     def get_r(self):
         # the game never got played
-        if self.winners is None:
+        if self._winners is None:
             return 0
 
         # landlord win is positive
-        if self.landlord_position in self.winners:
-            return self.bet_amount * 2
+        if self._landlord_position in self._winners:
+            return self._bet_amount * 2
 
         # peasant win is negative
-        return - self.bet_amount
+        return - self._bet_amount
 
     # -1 to 1, -1 is peasant win
     def get_winbased_r(self):
         # the game never got played
-        if self.winners is None:
+        if self._winners is None:
             return 0
 
         # landlord win is positive
-        if self.landlord_position in self.winners:
+        if self._landlord_position in self._winners:
             return 1
 
         # peasant win is negative
         return -1
 
     def get_scores(self):
-        return copy(self.scores)
+        return copy(self._scores)
 
     def main_game(self, debug=False):
-        self.control_position = self.landlord_position
-        self._current_position = self.landlord_position
+        self._control_position = self._landlord_position
+        self._current_position = self._landlord_position
         while True:
             move = self.get_current_player().make_move(self, debug=debug)
             self.play_move(move)
@@ -323,7 +322,7 @@ class LandlordGame:
                 break
 
     def get_bet_amount(self):
-        return self.bet_amount
+        return self._bet_amount
 
     def get_last_played(self):
         if len(self.get_move_logs()) == 0:
@@ -335,29 +334,29 @@ class LandlordGame:
         return None
 
     def get_control_position(self):
-        return self.control_position
+        return self._control_position
 
     def get_move_logs(self):
-        return self.move_logs
+        return self._move_logs
 
     def is_round_over(self):
-        return self.round_over
+        return self._round_over
 
     def has_winners(self):
-        return self.winners is not None
+        return self._winners is not None
 
     def get_winners(self):
-        return self.winners
+        return self._winners
 
     def get_winner_ais(self):
-        return [self.get_ai(pos) for pos in self.winners]
+        return [self.get_ai(pos) for pos in self._winners]
 
     def get_loser_ais(self):
-        return [self.get_ai(pos) for pos in list(TurnPosition) if pos not in self.winners]
+        return [self.get_ai(pos) for pos in list(TurnPosition) if pos not in self._winners]
 
     def get_ai(self, pos: TurnPosition):
-        return self.players[pos]
+        return self._players[pos]
 
     def get_ai_players(self):
-        return self.players
+        return self._players
 

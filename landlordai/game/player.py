@@ -75,16 +75,16 @@ class LearningPlayer(Player):
         if net_dir is None:
             self.empty_nets = True
         else:
-            self.load_nnets(net_dir)
+            self._load_nnets(net_dir)
 
         self.learning_rate = learning_rate
         self.discount_factor = discount_factor
-        self.feature_index = self.make_feature_index()
+        self.feature_index = self._make_feature_index()
 
         # elements for record
-        self.reset_records()
+        self._reset_records()
 
-    def reset_records(self):
+    def _reset_records(self):
         self.record_history_matrices = []
         self.record_move_vectors = []
         self._record_future_q = []
@@ -93,7 +93,7 @@ class LearningPlayer(Player):
         self._record_state_q = []
         self._recording_finalized = False
 
-    def load_nnets(self, net_dir):
+    def _load_nnets(self, net_dir):
         self.history_net = keras.models.load_model(net_dir + "/history.h5")
         self.position_net = keras.models.load_model(net_dir + '/position.h5')
 
@@ -119,7 +119,7 @@ class LearningPlayer(Player):
 
     '''
 
-    def make_feature_index(self):
+    def _make_feature_index(self):
         'maps card to feature index'
         feature_list = [card.get_name() for card in Card]
         feature_list.extend(['I_AM_LANDLORD',
@@ -143,14 +143,6 @@ class LearningPlayer(Player):
             return []
         return np.vstack(feature_stack)
 
-    def _derive_move_stack_bridge(self, game, player):
-        # pad to achieve timestep length
-        feature_stack = [np.concatenate([self.get_hand_vector(game, player),
-                                         np.zeros(LearningPlayer.TIMESTEP_FEATURES - LearningPlayer.HAND_FEATURES)])]
-        move_stack = [self.compute_move_vector(player, game.get_landlord_position(), move) for player, move in game.get_game_logs()]
-        feature_stack.extend(move_stack)
-        return np.vstack(feature_stack)
-
     def _append_padding(self, move_stack):
         fluff_volume = LearningPlayer.TIMESTEPS - len(move_stack)
 
@@ -162,11 +154,8 @@ class LearningPlayer(Player):
 
         return np.vstack([move_stack, fluff_stack])
 
-    def derive_features(self, game):
+    def _derive_features(self, game):
         return self._append_padding(self._derive_move_stack(game)).astype(np.int8)
-
-    def derive_features_bridge(self, game, player: TurnPosition):
-        return self._append_padding(self._derive_move_stack_bridge(game, player))
 
     def compute_move_vector(self, player: TurnPosition, landlord_position: TurnPosition, move):
         move_vector = np.zeros(LearningPlayer.TIMESTEP_FEATURES)
@@ -215,20 +204,20 @@ class LearningPlayer(Player):
             vector[-1] = 17
         return vector
 
-    def get_history_vector(self, features):
+    def _get_history_vector(self, features):
         if self.empty_nets:
             return np.random.random(LearningPlayer.TIMESTEP_FEATURES) * 0.01
 
         return self.history_net.predict(np.array([features]), batch_size=1)[0]
 
-    def get_position_predictions(self, history_matrix, move_options_matrix, hand_matrix):
+    def _get_position_predictions(self, history_matrix, move_options_matrix, hand_matrix):
         if self.empty_nets:
             return np.random.random((move_options_matrix.shape[0])) * 0.01
 
         num_rows = move_options_matrix.shape[0]
         return self.position_net.predict([history_matrix, move_options_matrix, hand_matrix], batch_size=num_rows).reshape(num_rows)
 
-    def make_bet_decision(self, game, legal_moves, predictions):
+    def _make_bet_decision(self, game, legal_moves, predictions):
         bet_indices = []
         # issue with recursive import, so not using constant
         flip_predictions = np.copy(predictions)
@@ -240,10 +229,10 @@ class LearningPlayer(Player):
         return np.argmax(flip_predictions)
 
     def full_move_evaluation(self, game, legal_moves):
-        history_features = self.derive_features(game)
+        history_features = self._derive_features(game)
 
         # all the moves we make from here will not affect the history, so assess it and copy
-        history_vector = self.get_history_vector(history_features)
+        history_vector = self._get_history_vector(history_features)
         history_matrix = np.tile(history_vector, (len(legal_moves), 1))
 
         # make the hand vector and copy it
@@ -254,7 +243,7 @@ class LearningPlayer(Player):
         move_options_matrix = np.vstack([self.compute_move_vector(game.get_current_position(),
                                                                   game.get_landlord_position(), move) for move in legal_moves])
 
-        predictions = self.get_position_predictions(history_matrix, move_options_matrix, hand_matrix)
+        predictions = self._get_position_predictions(history_matrix, move_options_matrix, hand_matrix)
 
         return predictions
 
@@ -283,7 +272,7 @@ class LearningPlayer(Player):
             best_move_index = np.argmin(predictions)
         else:
             # go landlord if it's worth it, otherwise peasant
-            best_move_index = self.make_bet_decision(game, legal_moves, predictions)
+            best_move_index = self._make_bet_decision(game, legal_moves, predictions)
 
         if debug:
             print('(' +  game.get_position_role_name(game.get_current_position()) + ') Player', self.get_name())
@@ -315,7 +304,7 @@ class LearningPlayer(Player):
         return best_move
 
     def record_move(self, game, best_move, best_move_q, player: TurnPosition):
-        history_matrix = self.derive_features(game)
+        history_matrix = self._derive_features(game)
         move_vector = self.compute_move_vector(player, game.get_landlord_position(), best_move)
         hand_vector = self.get_hand_vector(game, player)
 
@@ -367,7 +356,7 @@ class LearningPlayer_v2(LearningPlayer):
         return game.get_winbased_r()
 
     def record_move(self, game, best_move, best_move_q, player: TurnPosition):
-        history_matrix = self.derive_features(game)
+        history_matrix = self._derive_features(game)
 
         move_vector = self.compute_move_vector(player, game.get_landlord_position(), best_move)
         hand_vector = self.compute_remaining_hand_vector(game, move_vector, player)
@@ -395,10 +384,10 @@ class LearningPlayer_v2(LearningPlayer):
         return vector
 
     def full_move_evaluation(self, game, legal_moves):
-        history_features = self.derive_features(game)
+        history_features = self._derive_features(game)
 
         # all the moves we make from here will not affect the history, so assess it and copy
-        history_vector = self.get_history_vector(history_features)
+        history_vector = self._get_history_vector(history_features)
         history_matrix = np.tile(history_vector, (len(legal_moves), 1))
 
         # create features for each of the possible moves from this position
@@ -409,7 +398,7 @@ class LearningPlayer_v2(LearningPlayer):
         hand_matrix = np.vstack([self.compute_remaining_hand_vector(game,
                                 move_vector, game.get_current_position()) for move_vector in move_options_matrix])
 
-        predictions = self.get_position_predictions(history_matrix, move_options_matrix, hand_matrix)
+        predictions = self._get_position_predictions(history_matrix, move_options_matrix, hand_matrix)
 
         return predictions
 
@@ -526,7 +515,6 @@ class HumanPlayer(Player):
 
             # ai assistance
             if self.ai_before and self.known_hand:
-                print("Asking AI", self.ai_before, self.known_hand)
                 self.ask_ai(game, my_move=None)
 
             # get input

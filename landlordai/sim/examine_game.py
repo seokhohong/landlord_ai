@@ -27,9 +27,9 @@ if __name__ == "__main__":
     #           load_net('4_11_actualq4_model20')]
 
     players = [
-        load_v2_net('4_13_stream2_model3_90', '../stream_models/'),
-        load_v2_net('4_13_stream2_model2_101', '../stream_models/'),
-        load_v2_net('4_13_stream2_model3_89', '../stream_models/')
+        load_v2_net('4_13_stream2_model3_170', '../stream_models/'),
+        load_v2_net('4_13_stream2_model2_194', '../stream_models/'),
+        load_v2_net('4_13_stream2_model1_141', '../stream_models/')
     ]
 
     while True:

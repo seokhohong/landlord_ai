@@ -21,7 +21,7 @@ class TestLandlordMethods(unittest.TestCase):
             TurnPosition.THIRD: [Card.FIVE] * 4 + [Card.FOUR] * 4 + [Card.SIX] * 4 + [Card.TWO] * 4 + [
                 Card.THREE] * 2 + [Card.LITTLE_JOKER] + [Card.BIG_JOKER]
         }
-        game.betting_complete = True
+        game._betting_complete = True
         game.force_setup(TurnPosition.THIRD, hands, 3)
         game2 = copy(game)
         game.play_move(SpecificMove(RankedMoveType(MoveType.BOMB, Card.FIVE), Counter({Card.FIVE: 4})))
@@ -36,7 +36,7 @@ class TestLandlordMethods(unittest.TestCase):
             TurnPosition.THIRD: [Card.FIVE] * 4 + [Card.FOUR] * 4 + [Card.SIX] * 4 + [Card.TWO] * 4 + [
                 Card.THREE] * 2 + [Card.LITTLE_JOKER] + [Card.BIG_JOKER]
         }
-        game.betting_complete = True
+        game._betting_complete = True
         game.force_setup(TurnPosition.THIRD, hands, 3)
         game.main_game()
         players[0].compute_future_q(game)
@@ -44,7 +44,7 @@ class TestLandlordMethods(unittest.TestCase):
         # game is over
         self.assertTrue(np.abs(players[0]._record_future_q[-1]) > 0.5)
 
-        features = players[0].derive_features(game)
+        features = players[0]._derive_features(game)
         self.assertTrue(np.sum(features[:, players[0].get_feature_index('I_AM_LANDLORD')]) != 0)
         # it is possible this guy never plays, eventually
         self.assertTrue(np.sum(features[:, players[0].get_feature_index('I_AM_BEFORE_LANDLORD')]) != 0)
@@ -64,7 +64,7 @@ class TestLandlordMethods(unittest.TestCase):
             # print(players[i].record_future_q[-1])
             # self.assertTrue(np.abs(players[i].record_future_q[-1]) > 0.5)
 
-            features = players[i].derive_features(game)
+            features = players[i]._derive_features(game)
             self.assertTrue(np.sum(features[:, players[i].get_feature_index('I_AM_LANDLORD')]) != 0)
             # it is possible this guy never plays, eventually
             self.assertTrue(np.sum(features[:, players[i].get_feature_index('I_AM_BEFORE_LANDLORD')]) != 0)
@@ -77,7 +77,7 @@ class TestLandlordMethods(unittest.TestCase):
             TurnPosition.SECOND: [Card.TEN] * 4 + [Card.NINE] * 4 + [Card.EIGHT] * 4 + [Card.SEVEN] * 4 + [Card.THREE],
             TurnPosition.THIRD: [Card.FIVE] * 4
         }
-        game.betting_complete = True
+        game._betting_complete = True
         game.force_setup(TurnPosition.THIRD, hands, 3)
         game.main_game()
         self.assertTrue(TurnPosition.THIRD in game.get_winners())
@@ -91,7 +91,7 @@ class TestLandlordMethods(unittest.TestCase):
             TurnPosition.SECOND: [Card.TEN] + [Card.THREE],
             TurnPosition.THIRD: [Card.FIVE] * 3 + [Card.THREE] + [Card.FOUR]
         }
-        game.betting_complete = True
+        game._betting_complete = True
         game.force_setup(TurnPosition.THIRD, hands, 3)
         hand_vector = players[0].get_hand_vector(game, TurnPosition.FIRST)
         self.assertTrue(hand_vector[11] == 4)
@@ -115,7 +115,7 @@ class TestLandlordMethods(unittest.TestCase):
         game = LandlordGame(players=players)
         while not game.is_round_over():
             curr_player = game.get_current_player()
-            curr_features = curr_player.derive_features(game)
+            curr_features = curr_player._derive_features(game)
             curr_hand_vector = game.get_current_player().get_hand_vector(game, game.get_current_position())
             move = game.get_current_player().make_move(game, game.get_current_position())
             curr_move_vector = game.get_current_player().compute_move_vector(game.get_current_position(),
@@ -127,21 +127,6 @@ class TestLandlordMethods(unittest.TestCase):
             self.assertTrue(np.allclose(curr_move_vector, curr_player.record_move_vectors[-1]))
             self.assertTrue(np.allclose(curr_hand_vector, curr_player.record_hand_vectors[-1]))
 
-    def test_features_bridge(self):
-        players = [LearningPlayer(name='random') for _ in range(3)]
-        game = LandlordGame(players=players)
-
-        while not game.is_round_over():
-            curr_player = game.get_current_player()
-            curr_features = curr_player.derive_features_bridge(game, game.get_current_position())
-            curr_hand_vector = game.get_current_player().get_hand_vector(game, game.get_current_position())
-
-            move = game.get_current_player().make_move(game, game.get_current_position())
-
-            game.play_move(move)
-
-            self.assertTrue(np.allclose(curr_features[0][:LearningPlayer.HAND_FEATURES], curr_hand_vector))
-
     def test_hand_vector_v2(self):
         players = [LearningPlayer_v2(name='random', estimation_mode=LearningPlayer.ACTUAL_Q) for _ in range(3)]
         game = LandlordGame(players=players)
@@ -150,7 +135,7 @@ class TestLandlordMethods(unittest.TestCase):
             TurnPosition.SECOND: [Card.TEN] * 3 + [Card.THREE],
             TurnPosition.THIRD: [Card.FIVE] * 3 + [Card.THREE] + [Card.FOUR]
         }
-        game.betting_complete = True
+        game._betting_complete = True
         game.force_setup(TurnPosition.SECOND, hands, 3)
         best_move = SpecificMove(RankedMoveType(MoveType.TRIPLE_SINGLE_KICKER, Card.TEN),
                                      cards=Counter({Card.TEN: 3, Card.THREE: 1}))
@@ -164,7 +149,7 @@ class TestLandlordMethods(unittest.TestCase):
         game = LandlordGame(players=players)
         while not game.is_round_over():
             curr_player = game.get_current_player()
-            curr_features = curr_player.derive_features(game)
+            curr_features = curr_player._derive_features(game)
 
             best_move, best_move_q = curr_player.decide_best_move(game)
             curr_move_vector = game.get_current_player().compute_move_vector(game.get_current_position(),
@@ -211,7 +196,7 @@ class TestLandlordMethods(unittest.TestCase):
             game.get_current_player().record_move(game, best_move, best_move_q, game.get_current_position())
 
             if game.get_current_player() == players[0]:
-                history_features = players[0].derive_features(game)
+                history_features = players[0]._derive_features(game)
                 all_history_features.append(history_features)
                 # all the moves we make from here will not affect the history, so assess it and copy
 

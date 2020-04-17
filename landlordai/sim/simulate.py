@@ -45,7 +45,7 @@ class Simulator:
         self.move_vectors.extend(player.get_record_move_vectors())
         self.hand_vectors.extend(player.get_record_hand_vectors())
         self.q.append(player.get_estimated_qs())
-        player.reset_records()
+        player._reset_records()
 
     def play_game(self):
         while True:
@@ -54,7 +54,7 @@ class Simulator:
             # play a meaningful game
             game.play_round()
             if game.has_winners():
-                players_to_record = game.winners
+                players_to_record = game._winners
                 if random.random() < self.record_everyone_pct:
                     players_to_record = list(TurnPosition)
                 for pos in players_to_record:
@@ -65,7 +65,7 @@ class Simulator:
 
             # clear out in case a full game wasn't played
             for player in players:
-                player.reset_records()
+                player._reset_records()
 
     def track_stats(self, game: LandlordGame):
         assert game.is_round_over()
