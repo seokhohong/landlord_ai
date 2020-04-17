@@ -13,8 +13,8 @@ def load_net(net, models_dir='../models/'):
                           epsilon=0,
                           learning_rate=0.3)
 
-def load_v2_net(net):
-    return LearningPlayer_v2(name=net, net_dir='../models/' + net,
+def load_v2_net(net, models_dir='../models/'):
+    return LearningPlayer_v2(name=net, net_dir=models_dir + net,
                           estimation_mode=LearningPlayer.ACTUAL_Q,
                           estimation_depth=7,
                           discount_factor=1,
@@ -27,9 +27,9 @@ if __name__ == "__main__":
     #           load_net('4_11_actualq4_model20')]
 
     players = [
-        load_net('4_13_stream1_model1_94', '../stream_models/'),
-        load_net('4_13_stream1_model1_95', '../stream_models/'),
-        load_net('4_13_stream1_model1_93', '../stream_models/')
+        load_v2_net('4_13_stream2_model3_90', '../stream_models/'),
+        load_v2_net('4_13_stream2_model2_101', '../stream_models/'),
+        load_v2_net('4_13_stream2_model3_89', '../stream_models/')
     ]
 
     while True:
@@ -38,12 +38,15 @@ if __name__ == "__main__":
         if game.has_winners():
             break
 
+    def printout_floats(array):
+        print(', '.join(["%.3f" % val for val in array]))
+
     print('\n')
     for i in range(3):
         players[i].compute_future_q(game)
         print(players[i].get_name())
-        print(np.array(players[i].get_estimated_qs(), dtype=np.float16))
-        print(np.array(players[i]._record_state_q, dtype=np.float16))
+        printout_floats(players[i].get_estimated_qs())
+        printout_floats(players[i]._record_state_q)
         print('\n')
 
     print('')

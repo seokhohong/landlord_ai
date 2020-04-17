@@ -4,4 +4,4 @@ gcloud beta dataproc clusters create $1 --enable-component-gateway --region us-c
 --optional-components ANACONDA,JUPYTER --project cps-ds-dev-vke8 \
 --initialization-actions 'gs://goog-dataproc-initialization-actions-us-central1/python/conda-install.sh','gs://hseokho-lai/init/pip3-install.sh' \
 --metadata CONDA_PACKAGES="tensorflow keras numpy scipy" --metadata PIP_PACKAGES="landlord-ai tqdm pathlib" --project='dao-aa-poc-uyim' \
---region=us-central1 --properties spark:spark.speculation=True,spark:spark.speculation.multiplier=2,spark:spark.dynamicAllocation.executorIdleTimeout=15s
+--region=us-central1 --properties spark:spark.speculation=True,spark:spark.speculation.multiplier=2,spark:spark.dynamicAllocation.executorIdleTimeout=15s,spark:spark.executor.memory=1g\

@@ -169,7 +169,8 @@ class TestLandlordMethods(unittest.TestCase):
             best_move, best_move_q = curr_player.decide_best_move(game)
             curr_move_vector = game.get_current_player().compute_move_vector(game.get_current_position(),
                                                                              game.get_landlord_position(), best_move)
-            curr_hand_vector = game.get_current_player().compute_remaining_hand_vector(game, curr_move_vector, game.get_current_position())
+            curr_hand_vector = game.get_current_player().compute_remaining_hand_vector(game, curr_move_vector,
+                                                                                       game.get_current_position())
 
             curr_player.record_move(game, best_move, best_move_q, game.get_current_position())
             game.play_move(best_move)
@@ -180,7 +181,7 @@ class TestLandlordMethods(unittest.TestCase):
 
         players[0].compute_future_q(game)
 
-        if len(players[0].get_estimated_qs()) > 5:
+        if game.has_winners():
             print(np.max(np.abs(players[0].get_estimated_qs())))
             self.assertTrue(np.max(np.abs(players[0].get_estimated_qs())) == 1)
 
