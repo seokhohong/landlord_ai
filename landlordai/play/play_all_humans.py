@@ -16,6 +16,18 @@ def manual_kitty():
 def manual_hand():
     return parse_cardlist("Please enter the Cards in your hand")
 
+def get_first_player(game):
+    while True:
+        first_player = input("First Player Name >").strip()
+        first_turn = None
+        for turn in list(TurnPosition):
+            if game.get_ai_players()[turn].get_name() == first_player:
+                first_turn = turn
+
+        if first_turn is not None:
+            return first_turn
+
+
 def human_game(player_names, perspective):
     perspective_hand = None
     players = []
@@ -29,7 +41,10 @@ def human_game(player_names, perspective):
                                    ai_before=player_is_perspective))
 
     game = LandlordGame(players, kitty_callback=manual_kitty)
-    game.force_current_position(TurnPosition.FIRST)
+
+    first_player = get_first_player(game)
+
+    game.force_current_position(first_player)
     game.force_hand(TurnPosition.FIRST, perspective_hand)
 
     while not game.is_round_over():
