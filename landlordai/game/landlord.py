@@ -198,7 +198,7 @@ class LandlordGame:
                     hand.remove(card)
                 else:
                     # if we don't know the hand, then just remove one card from it
-                    hand = hand[1:]
+                    self._hands[self._current_position] = self.get_hand(self._current_position)[1:]
 
     # main play_move, triages depending on move
     def play_move(self, move, hand_known=True):

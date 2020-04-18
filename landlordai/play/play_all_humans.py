@@ -27,6 +27,12 @@ def get_first_player(game):
         if first_turn is not None:
             return first_turn
 
+def perspective_position(game, perspective):
+    for turn in list(TurnPosition):
+        if game.get_ai_players()[turn].get_name() == perspective:
+            return turn
+    assert False
+
 
 def human_game(player_names, perspective):
     perspective_hand = None
@@ -45,7 +51,7 @@ def human_game(player_names, perspective):
     first_player = get_first_player(game)
 
     game.force_current_position(first_player)
-    game.force_hand(TurnPosition.FIRST, perspective_hand)
+    game.force_hand(perspective_position(game, perspective), perspective_hand)
 
     while not game.is_round_over():
         current_player = game.get_current_player()
@@ -67,6 +73,5 @@ def human_game(player_names, perspective):
             print('WINNERS:', game.get_ai_players()[winner].get_name())
 
 if __name__ == "__main__":
-    player_names = ['Seokho', 'Clare', 'Jon']
-    perspective = player_names[0]
-    human_game(player_names, perspective)
+    player_names = ['Clare', 'Seokho', 'Jon']
+    human_game(player_names, 'Seokho')
